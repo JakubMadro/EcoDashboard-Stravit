@@ -52,6 +52,27 @@ try:
 except ImportError:
     HAS_AZURE = False
 
+_table_initialized = False
+_table_client = None
+
+def _get_table_client():
+    global _table_initialized, _table_client
+    if not HAS_AZURE or not AZURE_STORAGE_CONNECTION_STRING:
+        return None
+    if _table_client is None:
+        try:
+            _table_client = TableClient.from_connection_string(conn_str=AZURE_STORAGE_CONNECTION_STRING, table_name="crews")
+        except Exception as e:
+            print(f"Error creating TableClient: {e}", flush=True)
+            return None
+    if not _table_initialized:
+        try:
+            _table_client.create_table()
+        except Exception:
+            pass
+        _table_initialized = True
+    return _table_client
+
 
 class AuthRequired(RuntimeError):
     pass
@@ -371,13 +392,9 @@ def build_data_from_activities(activities):
     }
 
 def save_profile_index(index_payload):
-    if HAS_AZURE and AZURE_STORAGE_CONNECTION_STRING:
+    table_client = _get_table_client()
+    if table_client:
         try:
-            table_client = TableClient.from_connection_string(conn_str=AZURE_STORAGE_CONNECTION_STRING, table_name="crews")
-            try:
-                table_client.create_table()
-            except Exception:
-                pass
             entity = {
                 "PartitionKey": "index",
                 "RowKey": "profiles-index",
@@ -401,9 +418,9 @@ def save_profile_index(index_payload):
 
 def load_profile_summaries():
     payload = []
-    if HAS_AZURE and AZURE_STORAGE_CONNECTION_STRING:
+    table_client = _get_table_client()
+    if table_client:
         try:
-            table_client = TableClient.from_connection_string(conn_str=AZURE_STORAGE_CONNECTION_STRING, table_name="crews")
             try:
                 entity = table_client.get_entity(partition_key="index", row_key="profiles-index")
                 data_str = entity.get("payload")
@@ -449,13 +466,9 @@ def save_crew_data(crew_id, payload):
     profile_data["members"] = [member for member in members if isinstance(member, str) and member.strip()]
 
     data_str = json.dumps(profile_data, ensure_ascii=False)
-    if HAS_AZURE and AZURE_STORAGE_CONNECTION_STRING:
+    table_client = _get_table_client()
+    if table_client:
         try:
-            table_client = TableClient.from_connection_string(conn_str=AZURE_STORAGE_CONNECTION_STRING, table_name="crews")
-            try:
-                table_client.create_table()
-            except Exception:
-                pass
             entity = {
                 "PartitionKey": "profiles",
                 "RowKey": profile_data["id"],
@@ -495,9 +508,9 @@ def save_crew_data(crew_id, payload):
 
 
 def load_crew_data(crew_id):
-    if HAS_AZURE and AZURE_STORAGE_CONNECTION_STRING:
+    table_client = _get_table_client()
+    if table_client:
         try:
-            table_client = TableClient.from_connection_string(conn_str=AZURE_STORAGE_CONNECTION_STRING, table_name="crews")
             try:
                 entity = table_client.get_entity(partition_key="profiles", row_key=crew_id)
                 me = entity.get("me") or ""
@@ -603,6 +616,15 @@ def app(environ, start_response):
     method = environ.get("REQUEST_METHOD", "GET").upper()
     query_string = environ.get("QUERY_STRING", "")
     params = urllib.parse.parse_qs(query_string)
+
+    # Obsługa standardowych zapytań przeglądarek i sond zdrowotnych Azure
+    if method == "GET":
+        if path == "/favicon.ico" or path.startswith("/apple-touch-icon"):
+            start_response("204 No Content", [])
+            return [b""]
+        if path.startswith("/robots") and path.endswith(".txt"):
+            body = b"User-agent: *\nDisallow: /\n"
+            return _send_bytes(start_response, 200, body, "text/plain; charset=utf-8")
 
     if method == "GET" and path == "/api/auth/status":
         return _send_json(start_response, 200, {
