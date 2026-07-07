@@ -385,28 +385,30 @@ def save_profile_index(index_payload):
 
 
 def load_profile_summaries():
+    payload = []
     if HAS_AZURE and AZURE_STORAGE_CONNECTION_STRING:
         try:
             blob_service_client = BlobServiceClient.from_connection_string(AZURE_STORAGE_CONNECTION_STRING)
             blob_client = blob_service_client.get_blob_client(container=BLOB_CONTAINER_NAME, blob=PROFILE_INDEX_BLOB)
             if blob_client.exists():
                 data_str = blob_client.download_blob().readall().decode("utf-8")
-                payload = json.loads(data_str)
-                if isinstance(payload, list):
-                    return payload
+                loaded = json.loads(data_str)
+                if isinstance(loaded, list):
+                    payload = loaded
         except Exception as e:
             print(f"Error loading profile index from Azure Blob: {e}")
 
-    try:
-        local_file = BASE_DIR / "data" / "crews" / PROFILE_INDEX_BLOB
-        if local_file.exists():
-            payload = json.loads(local_file.read_text(encoding="utf-8"))
-            if isinstance(payload, list):
-                return payload
-    except Exception as e:
-        print(f"Error loading profile index locally: {e}")
+    if not payload:
+        try:
+            local_file = BASE_DIR / "data" / "crews" / PROFILE_INDEX_BLOB
+            if local_file.exists():
+                loaded = json.loads(local_file.read_text(encoding="utf-8"))
+                if isinstance(loaded, list):
+                    payload = loaded
+        except Exception as e:
+            print(f"Error loading profile index locally: {e}")
 
-    return []
+    return [p for p in payload if isinstance(p, dict) and p.get("me") and p.get("me").strip()]
 
 
 def save_crew_data(crew_id, payload):
@@ -451,21 +453,22 @@ def save_crew_data(crew_id, payload):
     except Exception as e:
         print(f"Error saving profile locally: {e}")
 
-    summaries = load_profile_summaries()
-    summary = {
-        "id": profile_data["id"],
-        "me": profile_data["me"],
-        "memberCount": len(profile_data["members"]),
-    }
-    existing = [item for item in summaries if item.get("id") == profile_data["id"]]
-    if existing:
-        for item in summaries:
-            if item.get("id") == profile_data["id"]:
-                item.update(summary)
-                break
-    else:
-        summaries.append(summary)
-    save_profile_index(summaries)
+    if profile_data["me"]:
+        summaries = load_profile_summaries()
+        summary = {
+            "id": profile_data["id"],
+            "me": profile_data["me"],
+            "memberCount": len(profile_data["members"]),
+        }
+        existing = [item for item in summaries if item.get("id") == profile_data["id"]]
+        if existing:
+            for item in summaries:
+                if item.get("id") == profile_data["id"]:
+                    item.update(summary)
+                    break
+        else:
+            summaries.append(summary)
+        save_profile_index(summaries)
     return True
 
 

@@ -243,8 +243,13 @@
   </section>
 
   <section>
-    <div class="section-head"><span class="section-num">04</span><h2>Punkty — porównanie ekipy</h2></div>
+    <div class="section-head"><span class="section-num">03</span><h2>Punkty — porównanie ekipy</h2></div>
     <div class="chart-box tall"><canvas id="barChart"></canvas></div>
+  </section>
+
+  <section>
+    <div class="section-head"><span class="section-num">04</span><h2>Postęp skumulowany</h2><span class="section-hint">łączna suma punktów w kolejnych dniach</span></div>
+    <div class="chart-box tall"><canvas id="cumulativeChart"></canvas></div>
   </section>
 
   <section>
@@ -501,6 +506,8 @@ async function refreshData(force = false) {
         const crewData = await crewResp.json();
         if (Array.isArray(crewData)) {
           crew = crewData;
+        } else if (crewData && typeof crewData === 'object' && Array.isArray(crewData.members)) {
+          crew = crewData.members;
         }
       }
     } catch(crewErr) {
@@ -666,7 +673,7 @@ async function loadSavedProfiles(){
     const resp = await fetch('/api/crew/profiles');
     if (!resp.ok) throw new Error('profiles');
     const data = await resp.json();
-    savedProfiles = Array.isArray(data) ? data : [];
+    savedProfiles = Array.isArray(data) ? data.filter(p => p && p.me && p.me.trim()) : [];
     renderProfileControls();
   } catch (e) {
     savedProfiles = [];
@@ -750,6 +757,11 @@ function loadCrew(){
 async function saveCrew(){
   try{ localStorage.setItem(getCrewStorageKey(), JSON.stringify(crew)); }
   catch(e){}
+  
+  if (!ME_NAME && (!crew || crew.length === 0)) {
+    return;
+  }
+  
   try {
     localStorage.setItem('dashboard-profile-id', profileId);
     localStorage.setItem('dashboard-me', ME_NAME);
@@ -903,6 +915,44 @@ function renderBarChart(){
   });
 }
 
+function renderCumulativeChart(){
+  destroyChart('cumulative');
+  const ctx = document.getElementById('cumulativeChart');
+  const present = crew.filter(n=>DATA.users[n]);
+  charts.cumulative = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels: DATA.allDates.map(fmtDateShort),
+      datasets: present.map(name=>{
+        let sum = 0;
+        const cumulativeData = DATA.allDates.map(d=>{
+          sum += DATA.users[name].daily[d].points;
+          return sum;
+        });
+        return {
+          label:name,
+          data: cumulativeData,
+          borderColor: colorFor(name),
+          backgroundColor: colorFor(name)+'22',
+          borderWidth: name===ME_NAME?3:2,
+          tension:0.35,
+          pointRadius:3,
+          pointBackgroundColor: colorFor(name),
+        };
+      })
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom', labels:{color:'#eef4f8', font:{family:'Inter', size:12}, boxWidth:10, boxHeight:10}}},
+      scales:{
+        x:{grid:{color:'#1c3a54'}, ticks:{color:'#7f9bb4'}},
+        y:{grid:{color:'#1c3a54'}, ticks:{color:'#7f9bb4'}, title:{display:true, text:'suma punktów', color:'#7f9bb4'}}
+      }
+    }
+  });
+}
+
 function renderLineChart(){
   destroyChart('line');
   const ctx = document.getElementById('lineChart');
@@ -980,6 +1030,7 @@ function renderAll(){
   renderStats();
   renderBibs();
   renderBarChart();
+  renderCumulativeChart();
   renderLineChart();
   renderStackChart();
   renderTop10();
