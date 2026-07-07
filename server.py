@@ -8,6 +8,7 @@ import os
 import re
 import sys
 import time
+import threading
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -22,11 +23,24 @@ BASE_DIR = Path(__file__).resolve().parent
 BASE_URL = "https://mtupolska.stravit.app"
 DEFAULT_SLUG = "rywalizacja-sportowa"
 CACHE_TTL_SECONDS = 120
-STATUS_TEXT = {200: "OK", 400: "Bad Request", 401: "Unauthorized", 404: "Not Found", 502: "Bad Gateway"}
+STATUS_TEXT = {200: "OK", 400: "Bad Request", 401: "Unauthorized", 404: "Not Found", 502: "Bad Gateway", 403: "Forbidden"}
+
+STRAVIT_EMAIL = os.environ.get("STRAVIT_EMAIL")
+STRAVIT_PASSWORD = os.environ.get("STRAVIT_PASSWORD")
+AZURE_STORAGE_CONNECTION_STRING = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
+BLOB_CONTAINER_NAME = os.environ.get("BLOB_CONTAINER_NAME", "crews")
+PROFILE_INDEX_BLOB = "profiles-index.json"
 
 _cache = {}
+_cache_lock = threading.Lock()
 _cookie_jar = http.cookiejar.CookieJar()
 _opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(_cookie_jar))
+
+try:
+    from azure.storage.blob import BlobServiceClient
+    HAS_AZURE = True
+except ImportError:
+    HAS_AZURE = False
 
 
 class AuthRequired(RuntimeError):
@@ -345,11 +359,185 @@ def build_data_from_activities(activities):
         "users": users,
     }
 
+def save_profile_index(index_payload):
+    if HAS_AZURE and AZURE_STORAGE_CONNECTION_STRING:
+        try:
+            blob_service_client = BlobServiceClient.from_connection_string(AZURE_STORAGE_CONNECTION_STRING)
+            container_client = blob_service_client.get_container_client(BLOB_CONTAINER_NAME)
+            try:
+                container_client.create_container()
+            except Exception:
+                pass
+            blob_client = blob_service_client.get_blob_client(container=BLOB_CONTAINER_NAME, blob=PROFILE_INDEX_BLOB)
+            blob_client.upload_blob(json.dumps(index_payload, ensure_ascii=False), overwrite=True)
+            return True
+        except Exception as e:
+            print(f"Error saving profile index to Azure Blob: {e}")
 
-def load_challenge_data(slug):
+    try:
+        local_dir = BASE_DIR / "data" / "crews"
+        local_dir.mkdir(parents=True, exist_ok=True)
+        (local_dir / PROFILE_INDEX_BLOB).write_text(json.dumps(index_payload, ensure_ascii=False), encoding="utf-8")
+        return True
+    except Exception as e:
+        print(f"Error saving profile index locally: {e}")
+        return False
+
+
+def load_profile_summaries():
+    if HAS_AZURE and AZURE_STORAGE_CONNECTION_STRING:
+        try:
+            blob_service_client = BlobServiceClient.from_connection_string(AZURE_STORAGE_CONNECTION_STRING)
+            blob_client = blob_service_client.get_blob_client(container=BLOB_CONTAINER_NAME, blob=PROFILE_INDEX_BLOB)
+            if blob_client.exists():
+                data_str = blob_client.download_blob().readall().decode("utf-8")
+                payload = json.loads(data_str)
+                if isinstance(payload, list):
+                    return payload
+        except Exception as e:
+            print(f"Error loading profile index from Azure Blob: {e}")
+
+    try:
+        local_file = BASE_DIR / "data" / "crews" / PROFILE_INDEX_BLOB
+        if local_file.exists():
+            payload = json.loads(local_file.read_text(encoding="utf-8"))
+            if isinstance(payload, list):
+                return payload
+    except Exception as e:
+        print(f"Error loading profile index locally: {e}")
+
+    return []
+
+
+def save_crew_data(crew_id, payload):
+    if isinstance(payload, dict):
+        profile_data = dict(payload)
+    else:
+        profile_data = {
+            "id": crew_id,
+            "name": f"Profil {crew_id}",
+            "me": "",
+            "members": payload if isinstance(payload, list) else [],
+        }
+
+    profile_data["id"] = profile_data.get("id") or crew_id
+    profile_data["me"] = (profile_data.get("me") or "").strip()
+    profile_data.pop("name", None)
+    members = profile_data.get("members")
+    if not isinstance(members, list):
+        members = []
+    profile_data["members"] = [member for member in members if isinstance(member, str) and member.strip()]
+
+    data_str = json.dumps(profile_data, ensure_ascii=False)
+    if HAS_AZURE and AZURE_STORAGE_CONNECTION_STRING:
+        try:
+            blob_service_client = BlobServiceClient.from_connection_string(AZURE_STORAGE_CONNECTION_STRING)
+            container_client = blob_service_client.get_container_client(BLOB_CONTAINER_NAME)
+            try:
+                container_client.create_container()
+            except Exception:
+                pass
+            blob_client = blob_service_client.get_blob_client(container=BLOB_CONTAINER_NAME, blob=f"profiles/{profile_data['id']}.json")
+            blob_client.upload_blob(data_str, overwrite=True)
+            print(f"Saved profile {profile_data['id']} to Azure Blob Storage.")
+        except Exception as e:
+            print(f"Error saving profile to Azure Blob: {e}")
+
+    try:
+        local_dir = BASE_DIR / "data" / "crews" / "profiles"
+        local_dir.mkdir(parents=True, exist_ok=True)
+        (local_dir / f"{profile_data['id']}.json").write_text(data_str, encoding="utf-8")
+        print(f"Saved profile {profile_data['id']} to local file system.")
+    except Exception as e:
+        print(f"Error saving profile locally: {e}")
+
+    summaries = load_profile_summaries()
+    summary = {
+        "id": profile_data["id"],
+        "me": profile_data["me"],
+        "memberCount": len(profile_data["members"]),
+    }
+    existing = [item for item in summaries if item.get("id") == profile_data["id"]]
+    if existing:
+        for item in summaries:
+            if item.get("id") == profile_data["id"]:
+                item.update(summary)
+                break
+    else:
+        summaries.append(summary)
+    save_profile_index(summaries)
+    return True
+
+
+def load_crew_data(crew_id):
+    if HAS_AZURE and AZURE_STORAGE_CONNECTION_STRING:
+        try:
+            blob_service_client = BlobServiceClient.from_connection_string(AZURE_STORAGE_CONNECTION_STRING)
+            blob_client = blob_service_client.get_blob_client(container=BLOB_CONTAINER_NAME, blob=f"profiles/{crew_id}.json")
+            if blob_client.exists():
+                stream = blob_client.download_blob()
+                data_str = stream.readall().decode("utf-8")
+                return json.loads(data_str)
+        except Exception as e:
+            print(f"Error loading profile from Azure Blob: {e}")
+
+    try:
+        local_file = BASE_DIR / "data" / "crews" / "profiles" / f"{crew_id}.json"
+        if local_file.exists():
+            data_str = local_file.read_text(encoding="utf-8")
+            return json.loads(data_str)
+    except Exception as e:
+        print(f"Error loading profile locally: {e}")
+
+    return {}
+
+
+def list_crew_profiles():
+    return load_profile_summaries()
+
+
+def auto_login_if_configured():
+    if STRAVIT_EMAIL and STRAVIT_PASSWORD:
+        if not is_logged_in():
+            print("Auto-logging in to Stravit...")
+            try:
+                login_to_stravit(STRAVIT_EMAIL, STRAVIT_PASSWORD)
+                print("Auto-login successful!")
+            except Exception as e:
+                print(f"Auto-login failed: {e}")
+
+
+def background_worker():
+    while True:
+        try:
+            auto_login_if_configured()
+            if is_logged_in():
+                print("Background thread: fetching challenge data...")
+                url = f"{BASE_URL}/challenge/{urllib.parse.quote(DEFAULT_SLUG)}/export/activities/csv"
+                csv_text = fetch_text(url, headers=request_headers("text/csv,text/plain,*/*"))
+                if "Logowanie do Stravit" not in csv_text and "<form" not in csv_text[:2000]:
+                    data = build_data_from_activities(parse_csv_activities(csv_text))
+                    now = time.time()
+                    with _cache_lock:
+                        _cache[DEFAULT_SLUG] = {"created": now, "data": data}
+                    print("Background thread: Cache updated successfully.")
+                else:
+                    print("Background thread: Stravit session expired.")
+            else:
+                print("Background thread: Not logged in, skipping fetch.")
+        except Exception as e:
+            print(f"Background thread error: {e}")
+        time.sleep(900)
+
+
+def load_challenge_data(slug, force=False):
+    auto_login_if_configured()
+    
     now = time.time()
-    cached = _cache.get(slug)
-    if cached and now - cached["created"] < CACHE_TTL_SECONDS:
+    with _cache_lock:
+        cached = _cache.get(slug)
+    
+    if not force and cached and now - cached["created"] < CACHE_TTL_SECONDS:
         return cached["data"]
 
     url = f"{BASE_URL}/challenge/{urllib.parse.quote(slug)}/export/activities/csv"
@@ -358,7 +546,8 @@ def load_challenge_data(slug):
         raise AuthRequired("Sesja Stravit wygasla. Zaloguj sie ponownie.")
 
     data = build_data_from_activities(parse_csv_activities(csv_text))
-    _cache[slug] = {"created": now, "data": data}
+    with _cache_lock:
+        _cache[slug] = {"created": now, "data": data}
     return data
 
 
@@ -380,16 +569,46 @@ def _send_json(start_response, status, payload):
 def app(environ, start_response):
     path = urllib.parse.urlparse(environ.get("PATH_INFO", "/")).path
     method = environ.get("REQUEST_METHOD", "GET").upper()
+    query_string = environ.get("QUERY_STRING", "")
+    params = urllib.parse.parse_qs(query_string)
 
     if method == "GET" and path == "/api/auth/status":
-        return _send_json(start_response, 200, {"loggedIn": is_logged_in()})
+        return _send_json(start_response, 200, {
+            "loggedIn": is_logged_in(),
+            "hasMasterCredentials": bool(STRAVIT_EMAIL and STRAVIT_PASSWORD)
+        })
+
+    if path == "/api/crew/profiles":
+        if method == "GET":
+            return _send_json(start_response, 200, list_crew_profiles())
+        return _send_json(start_response, 405, {"error": "Method not allowed"})
+
+    if path == "/api/crew":
+        crew_id = params.get("id", [None])[0]
+        if not crew_id:
+            return _send_json(start_response, 400, {"error": "Missing crew id parameter."})
+
+        if method == "GET":
+            crew_list = load_crew_data(crew_id)
+            return _send_json(start_response, 200, crew_list)
+
+        if method == "POST":
+            try:
+                length = int(environ.get("CONTENT_LENGTH", "0"))
+                raw = environ.get("wsgi.input", b"").read(length).decode("utf-8") if length else "{}"
+                payload = json.loads(raw or "{}")
+                success = save_crew_data(crew_id, payload)
+                return _send_json(start_response, 200, {"ok": success})
+            except Exception as e:
+                return _send_json(start_response, 400, {"error": str(e)})
 
     if method == "GET":
         match = re.fullmatch(r"/api/challenge/([^/]+)/data", path)
         if match:
             slug = urllib.parse.unquote(match.group(1))
+            force = "true" in params.get("force", [])
             try:
-                payload = load_challenge_data(slug)
+                payload = load_challenge_data(slug, force=force)
                 return _send_json(start_response, 200, payload)
             except AuthRequired as exc:
                 return _send_json(start_response, 401, {"error": str(exc), "authRequired": True})
@@ -446,15 +665,34 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
+        params = urllib.parse.parse_qs(parsed.query)
+        
         if parsed.path == "/api/auth/status":
-            self.send_json(200, {"loggedIn": is_logged_in()})
+            self.send_json(200, {
+                "loggedIn": is_logged_in(),
+                "hasMasterCredentials": bool(STRAVIT_EMAIL and STRAVIT_PASSWORD)
+            })
+            return
+
+        if parsed.path == "/api/crew/profiles":
+            self.send_json(200, list_crew_profiles())
+            return
+
+        if parsed.path == "/api/crew":
+            crew_id = params.get("id", [None])[0]
+            if not crew_id:
+                self.send_json(400, {"error": "Missing crew id parameter."})
+                return
+            crew_list = load_crew_data(crew_id)
+            self.send_json(200, crew_list)
             return
 
         match = re.fullmatch(r"/api/challenge/([^/]+)/data", parsed.path)
         if match:
             slug = urllib.parse.unquote(match.group(1))
+            force = "true" in params.get("force", [])
             try:
-                payload = load_challenge_data(slug)
+                payload = load_challenge_data(slug, force=force)
                 self.send_json(200, payload)
             except AuthRequired as exc:
                 self.send_json(401, {"error": str(exc), "authRequired": True})
@@ -468,6 +706,23 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
+        params = urllib.parse.parse_qs(parsed.query)
+
+        if parsed.path == "/api/crew":
+            try:
+                crew_id = params.get("id", [None])[0]
+                if not crew_id:
+                    self.send_json(400, {"error": "Missing crew id parameter."})
+                    return
+                length = int(self.headers.get("Content-Length", "0"))
+                raw = self.rfile.read(length).decode("utf-8")
+                payload = json.loads(raw or "{}")
+                success = save_crew_data(crew_id, payload)
+                self.send_json(200, {"ok": success})
+            except Exception as e:
+                self.send_json(400, {"error": str(e)})
+            return
+
         if parsed.path != "/api/auth/login":
             self.send_json(404, {"error": "Nieznany endpoint."})
             return
@@ -493,6 +748,15 @@ def main():
     print(f"Dashboard: http://{HOST}:{PORT}/dashboard.html")
     print("Login Stravit: /api/auth/login")
     print("Dane CSV Stravit: /api/challenge/rywalizacja-sportowa/data")
+    
+    # Auto-login at startup if credentials are set
+    auto_login_if_configured()
+    
+    # Start background cache sync thread
+    t = threading.Thread(target=background_worker, daemon=True)
+    t.start()
+    print("Background thread started for auto-refreshing Stravit cache.")
+    
     ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()
 
 
