@@ -1,2 +1,5 @@
 azure-storage-blob>=12.0.0
 gunicorn>=20.1.0
+azure-data-tables>=12.4.0
+azure-monitor-opentelemetry>=1.6.0
+opentelemetry-instrumentation-wsgi>=0.40b0
