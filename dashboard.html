@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rywalizacja Sportowa — Tablica Wyników</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0b1826;
+    --bg2:#0d1f30;
+    --surface:#132c40;
+    --surface2:#183a53;
+    --line:#254a68;
+    --amber:#ffb700;
+    --teal:#2ec4b6;
+    --coral:#ef476f;
+    --violet:#a78bfa;
+    --sky:#38bdf8;
+    --text:#eef4f8;
+    --muted:#7f9bb4;
+    --muted2:#5b7a94;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 500px at 15% -10%, rgba(255,183,0,0.07), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(46,196,182,0.08), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    padding:28px 20px 60px;
+    min-height:100vh;
+  }
+  .wrap{max-width:1180px;margin:0 auto;}
+
+  /* ---- Header / LED ticker ---- */
+  .track-lines{position:relative;height:6px;border-radius:3px;overflow:hidden;margin-bottom:22px;
+    background:repeating-linear-gradient(90deg, var(--line) 0 18px, transparent 18px 26px);}
+  header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:14px;margin-bottom:18px;}
+  .title-block .eyebrow{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.18em;color:var(--amber);text-transform:uppercase;}
+  h1{font-family:'Oswald',sans-serif;font-weight:700;font-size:clamp(28px,4vw,42px);letter-spacing:.01em;margin:2px 0 4px;text-transform:uppercase;}
+  .subtitle{color:var(--muted);font-size:14px;}
+  .subtitle b{color:var(--text);font-weight:600;}
+
+  .ticker{display:flex;gap:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface);}
+  .ticker-item{padding:10px 18px;text-align:center;border-right:1px solid var(--line);min-width:96px;}
+  .ticker-item:last-child{border-right:none;}
+  .ticker-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:19px;color:var(--amber);}
+  .ticker-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:2px;}
+
+  section{margin-top:34px;}
+  .section-head{display:flex;align-items:baseline;gap:10px;margin-bottom:14px;}
+  .section-num{font-family:'JetBrains Mono',monospace;color:var(--muted2);font-size:13px;}
+  h2{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.03em;font-size:19px;margin:0;font-weight:600;}
+  .section-hint{color:var(--muted);font-size:12.5px;margin-left:auto;}
+
+  /* ---- Crew management ---- */
+  .crew-panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px;}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+  .chip{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--line);border-radius:100px;padding:6px 6px 6px 14px;font-size:13.5px;}
+  .chip.me{border-color:var(--coral);background:rgba(239,71,111,0.12);}
+  .chip .rankdot{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);}
+  .chip button{all:unset;cursor:pointer;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px;line-height:1;}
+  .chip button:hover{background:rgba(255,255,255,0.08);color:var(--text);}
+  .add-row{display:flex;gap:8px;flex-wrap:wrap;}
+  .add-row input{flex:1;min-width:200px;background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;}
+  .add-row input:focus{outline:2px solid var(--amber);outline-offset:1px;}
+  .add-row button.add-btn{background:var(--amber);color:#1a1200;border:none;border-radius:8px;padding:10px 16px;font-weight:600;font-size:13.5px;cursor:pointer;font-family:'Inter',sans-serif;}
+  .add-row button.add-btn:hover{filter:brightness(1.08);}
+  .add-msg{font-size:12.5px;margin-top:8px;color:var(--muted);min-height:16px;}
+  .add-msg.err{color:var(--coral);}
+  .auth-panel{display:none;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap;}
+  .auth-panel.show{display:flex;}
+  .auth-panel input{width:190px;background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;}
+  .auth-panel input:focus{outline:2px solid var(--amber);outline-offset:1px;}
+  .auth-panel button{background:var(--amber);color:#1a1200;border:none;border-radius:8px;padding:8px 13px;font-weight:600;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;}
+  .auth-panel button:hover{filter:brightness(1.08);}
+  .auth-msg{font-size:11.5px;color:var(--muted);font-family:'JetBrains Mono',monospace;min-height:14px;text-align:right;}
+
+  /* ---- Bib cards ---- */
+  .bib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;}
+  .bib{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 16px 16px;overflow:hidden;}
+  .bib::before, .bib::after{content:'';position:absolute;top:9px;width:8px;height:8px;border-radius:50%;background:var(--bg);border:1px solid var(--line);}
+  .bib::before{left:9px;} .bib::after{right:9px;}
+  .bib .accentbar{position:absolute;left:0;top:0;bottom:0;width:4px;}
+  .bib-rank{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:.05em;}
+  .bib-name{font-family:'Oswald',sans-serif;font-size:18px;font-weight:600;margin:2px 0 10px;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
+  .tag-me{font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--coral);color:#1a0006;padding:2px 6px;border-radius:4px;letter-spacing:.05em;}
+  .bib-points{font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700;line-height:1;}
+  .bib-points-label{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+  .bib-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;margin-bottom:12px;}
+  .bib-stats div b{display:block;font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--text);font-weight:600;}
+  .bib-stats div span{color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;}
+  .spark{width:100%;height:34px;display:block;}
+  .empty{color:var(--muted);font-size:13.5px;padding:30px 10px;text-align:center;border:1px dashed var(--line);border-radius:12px;}
+
+  /* ---- chart containers ---- */
+  .chart-box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px 8px;}
+  .chart-box.tall{height:340px;}
+  canvas{max-width:100%;}
+
+  /* ---- leaderboard table ---- */
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  thead th{text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:8px 10px;border-bottom:1px solid var(--line);}
+  tbody td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,0.04);}
+  tbody tr.tracked{background:rgba(255,183,0,0.06);}
+  tbody tr.tracked td:first-child{border-left:2px solid var(--amber);}
+  td.rankcol{font-family:'JetBrains Mono',monospace;color:var(--muted);}
+  td.ptscol{font-family:'JetBrains Mono',monospace;text-align:right;color:var(--amber);}
+
+  footer{margin-top:44px;text-align:center;color:var(--muted2);font-size:11.5px;font-family:'JetBrains Mono',monospace;letter-spacing:.03em;}
+
+  @media (max-width:640px){
+    .ticker{flex-wrap:wrap;} .ticker-item{flex:1;min-width:80px;border-bottom:1px solid var(--line);}
+    .bib-stats{grid-template-columns:1fr 1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="track-lines"></div>
+  <header>
+    <div class="title-block">
+      <div class="eyebrow">Eco Challenge  Tablica wyników</div>
+      <h1>Tabela FIN</h1>
+      <div class="subtitle" id="subtitleText">Ładowanie danych…</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px;">
+      <div class="ticker" id="tickerBox">
+        <div class="ticker-item"><div class="ticker-val" id="tv0">…</div><div class="ticker-label">km łącznie</div></div>
+        <div class="ticker-item"><div class="ticker-val" id="tv1">…</div><div class="ticker-label">aktywności</div></div>
+        <div class="ticker-item"><div class="ticker-val" id="tv2">…</div><div class="ticker-label">pkt rozdano</div></div>
+        <div class="ticker-item"><div class="ticker-val" id="tv3">…</div><div class="ticker-label">w ruchu</div></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span id="refreshStatus" style="font-size:11.5px;color:var(--muted);font-family:'JetBrains Mono',monospace;"></span>
+        <button id="refreshBtn" style="background:var(--teal);color:#001a18;border:none;border-radius:8px;padding:9px 16px;font-weight:600;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;gap:6px;">
+          ↻ Odśwież dane
+        </button>
+      </div>
+      <form class="auth-panel" id="authPanel" autocomplete="on">
+        <input type="email" id="authEmail" placeholder="email Stravit" autocomplete="username">
+        <input type="password" id="authPassword" placeholder="hasło" autocomplete="current-password">
+        <button type="submit" id="authBtn">Zaloguj</button>
+        <div class="auth-msg" id="authMsg"></div>
+      </form>
+    </div>
+  </header>
+
+  <section>
+    <div class="section-head"><span class="section-num">01</span><h2>Twoja ekipa</h2><span class="section-hint">dodawaj / usuwaj zawodników — zapamiętam listę</span></div>
+    <div class="crew-panel">
+      <div class="chips" id="chips"></div>
+      <div class="add-row">
+        <input list="athleteList" id="addInput" placeholder="Wpisz imię i nazwisko zawodnika…" autocomplete="off">
+        <datalist id="athleteList"></datalist>
+        <button class="add-btn" id="addBtn">+ Dodaj do ekipy</button>
+      </div>
+      <div class="add-msg" id="addMsg"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><span class="section-num">02</span><h2>Karty startowe</h2><span class="section-hint">miejsce w klasyfikacji generalnej (na 377)</span></div>
+    <div class="bib-grid" id="bibGrid"></div>
+  </section>
+
+  <section>
+    <div class="section-head"><span class="section-num">03</span><h2>Punkty — porównanie ekipy</h2></div>
+    <div class="chart-box tall"><canvas id="barChart"></canvas></div>
+  </section>
+
+  <section>
+    <div class="section-head"><span class="section-num">04</span><h2>Dzienna forma</h2><span class="section-hint">punkty zdobyte każdego dnia wyzwania</span></div>
+    <div class="chart-box tall"><canvas id="lineChart"></canvas></div>
+  </section>
+
+  <section>
+    <div class="section-head"><span class="section-num">05</span><h2>Z czego te punkty</h2><span class="section-hint">rozkład punktów według typu treningu</span></div>
+    <div class="chart-box" style="height:auto;padding-bottom:18px;"><canvas id="stackChart"></canvas></div>
+  </section>
+
+  <section>
+    <div class="section-head"><span class="section-num">06</span><h2>Top 10 generalnej</h2><span class="section-hint">Twoja ekipa podświetlona</span></div>
+    <div class="chart-box" style="padding:6px 12px;">
+      <table>
+        <thead><tr><th>#</th><th>Zawodnik</th><th style="text-align:right;">Punkty</th></tr></thead>
+        <tbody id="top10Body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>DANE: EKSPORT WYZWANIA · 1–6 LIPCA 2026 · 377 UCZESTNIKÓW</footer>
+</div>
+
+<script>
+/* =====================================================================
+   Dane live pobieramy z lokalnego proxy server.py:
+   /api/challenge/rywalizacja-sportowa/data
+
+   CSV zostaje tylko jako awaryjny fallback, gdy sesja Stravit wygasnie
+   albo dashboard zostanie otwarty bez lokalnego serwera.
+   ===================================================================== */
+async function loadCSV(url) {
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`Nie można załadować CSV: ${resp.status}`);
+  return await resp.text();
+}
+
+function parseTimeToSeconds(timeStr) {
+  // format: HH:MM:SS
+  const parts = timeStr.trim().split(':');
+  if (parts.length !== 3) return 0;
+  return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
+}
+
+function buildDATA(csvText) {
+  const lines = csvText.split('\n');
+
+  // Znajdź linię nagłówkową (zawiera "nazwa uzytkownika" lub "lp")
+  let headerIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const low = lines[i].toLowerCase();
+    if (low.includes('nazwa uzytkownika') || low.includes('przyznane_punkty')) {
+      headerIdx = i;
+      break;
+    }
+  }
+  if (headerIdx === -1) throw new Error('Nie znaleziono nagłówka CSV');
+
+  // Wiersze danych
+  const dataLines = lines.slice(headerIdx + 1).filter(l => l.trim() && l.trim() !== 'aaa');
+
+  // Kolekcja aktywności
+  const activities = [];
+  for (const line of dataLines) {
+    const cols = line.split(';').map(c => c.trim());
+    if (cols.length < 9) continue;
+    const name   = cols[1];
+    const dist   = parseFloat(cols[2].replace(',', '.')) || 0;
+    const pts    = parseFloat(cols[3].replace(',', '.')) || 0;
+    const elev   = parseFloat(cols[4].replace(',', '.')) || 0;
+    const timeSec = parseTimeToSeconds(cols[5]);
+    const type   = cols[6];
+    const dateStr = cols[8].substring(0, 10); // YYYY-MM-DD
+    if (!name || !dateStr) continue;
+    activities.push({ name, dist, pts, elev, timeSec, type, dateStr });
+  }
+
+  if (activities.length === 0) throw new Error('Brak wierszy w CSV');
+
+  // Wykryj zakres dat
+  const allDatesSet = new Set(activities.map(a => a.dateStr));
+  const allDates = Array.from(allDatesSet).sort();
+  const dateRange = [allDates[0], allDates[allDates.length - 1]];
+
+  // Buduj per-user stats
+  const usersMap = {};
+  for (const act of activities) {
+    if (!usersMap[act.name]) {
+      usersMap[act.name] = {
+        distance: 0, points: 0, elevation: 0, time: 0, count: 0,
+        daily: {}, byType: {}
+      };
+      // Inicjalizuj zerami dla wszystkich dat zakresu
+      for (const d of allDates) {
+        usersMap[act.name].daily[d] = { points: 0, distance: 0 };
+      }
+    }
+    const u = usersMap[act.name];
+    u.distance += act.dist;
+    u.points   += act.pts;
+    u.elevation += act.elev;
+    u.time     += act.timeSec;
+    u.count    += 1;
+
+    if (u.daily[act.dateStr]) {
+      u.daily[act.dateStr].points   += act.pts;
+      u.daily[act.dateStr].distance += act.dist;
+    }
+    // Jeśli data aktywności nie jest w głównym zakresie — ignoruj (nie crashuj)
+
+    if (!u.byType[act.type]) {
+      u.byType[act.type] = { count: 0, distance: 0, points: 0, time: 0 };
+    }
+    u.byType[act.type].count    += 1;
+    u.byType[act.type].distance += act.dist;
+    u.byType[act.type].points   += act.pts;
+    u.byType[act.type].time     += act.timeSec;
+  }
+
+  // Zaokrągl wartości
+  for (const u of Object.values(usersMap)) {
+    u.distance = Math.round(u.distance * 100) / 100;
+    u.points   = Math.round(u.points   * 100) / 100;
+    u.elevation = Math.round(u.elevation * 10) / 10;
+    for (const d of Object.values(u.daily)) {
+      d.points   = Math.round(d.points   * 100) / 100;
+      d.distance = Math.round(d.distance * 100) / 100;
+    }
+    for (const t of Object.values(u.byType)) {
+      t.distance = Math.round(t.distance * 100) / 100;
+      t.points   = Math.round(t.points   * 100) / 100;
+    }
+  }
+
+  // Ranking po punktach
+  const sorted = Object.entries(usersMap)
+    .sort(([,a],[,b]) => b.points - a.points);
+  sorted.forEach(([name, u], idx) => { u.rank = idx + 1; });
+
+  // Top 10 liderów
+  const topLeaders = sorted.slice(0, 10).map(([name, u]) => ({
+    name, points: u.points, rank: u.rank
+  }));
+
+  // Totals
+  const totals = {
+    distance: Math.round(Object.values(usersMap).reduce((s, u) => s + u.distance, 0) * 10) / 10,
+    points:   Math.round(Object.values(usersMap).reduce((s, u) => s + u.points,   0) * 10) / 10,
+    count:    activities.length,
+    time:     Object.values(usersMap).reduce((s, u) => s + u.time, 0),
+  };
+
+  const allNames = Object.keys(usersMap).sort((a, b) => a.localeCompare(b, 'pl'));
+  const totalUsers = allNames.length;
+
+  return { dateRange, allDates, totalUsers, totals, allNames, topLeaders, users: usersMap };
+}
+
+// Nazwa pliku CSV — ostatnia awaryjna kopia, gdy API/proxy nie działa
+const CSV_FILENAME = 'rywalizacja-sportowa-activities-2026-07-06_14_05_56.csv';
+
+const CHALLENGE_SLUG = 'rywalizacja-sportowa';
+const API_DATA_URL = `/api/challenge/${CHALLENGE_SLUG}/data`;
+
+let DATA = null; // zostanie wypełnione po załadowaniu API
+
+async function fetchApiData() {
+  const resp = await fetch(API_DATA_URL, {
+    method: 'GET',
+    cache: 'no-store',
+    headers: { 'accept': 'application/json' }
+  });
+  const payload = await resp.json().catch(() => null);
+  if (!resp.ok || !payload) {
+    const err = new Error(payload?.error || `HTTP ${resp.status}`);
+    err.authRequired = Boolean(payload?.authRequired || resp.status === 401);
+    throw err;
+  }
+  if (!payload.users || !payload.allNames || !payload.dateRange) {
+    throw new Error('API zwrocilo niepelny zestaw danych.');
+  }
+  return payload;
+}
+
+function setAuthPanelVisible(visible) {
+  const panel = document.getElementById('authPanel');
+  if (panel) panel.classList.toggle('show', visible);
+}
+
+async function loginToStravit(event) {
+  if (event) event.preventDefault();
+  const email = document.getElementById('authEmail');
+  const password = document.getElementById('authPassword');
+  const btn = document.getElementById('authBtn');
+  const msg = document.getElementById('authMsg');
+  if (!email.value.trim() || !password.value) {
+    if (msg) { msg.textContent = 'Podaj email i hasło.'; msg.style.color = 'var(--coral)'; }
+    return;
+  }
+  if (btn) { btn.disabled = true; btn.textContent = 'Logowanie…'; }
+  if (msg) { msg.textContent = ''; msg.style.color = 'var(--muted)'; }
+  try {
+    const resp = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'accept': 'application/json' },
+      body: JSON.stringify({ email: email.value.trim(), password: password.value, remember: true })
+    });
+    const payload = await resp.json().catch(() => null);
+    if (!resp.ok) throw new Error(payload?.error || `HTTP ${resp.status}`);
+    password.value = '';
+    setAuthPanelVisible(false);
+    if (msg) msg.textContent = '';
+    await refreshData();
+  } catch(err) {
+    if (msg) { msg.textContent = err.message; msg.style.color = 'var(--coral)'; }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Zaloguj'; }
+  }
+}
+
+async function refreshData() {
+  const btn = document.getElementById('refreshBtn');
+  const status = document.getElementById('refreshStatus');
+  if (btn) { btn.disabled = true; btn.textContent = '⟳ Pobieranie…'; }
+  if (status) { status.textContent = ''; status.style.color = 'var(--muted)'; }
+  try {
+    try {
+      DATA = await fetchApiData();
+      if (status) status.textContent = '✓ API Stravit · ' + new Date().toLocaleTimeString('pl-PL', {hour:'2-digit',minute:'2-digit'});
+      setAuthPanelVisible(false);
+    } catch(apiErr) {
+      console.warn('API fetch failed, using local CSV:', apiErr.message);
+      if (apiErr.authRequired) setAuthPanelVisible(true);
+      let csvText;
+      csvText = await loadCSV(CSV_FILENAME);
+      DATA = buildDATA(csvText);
+      if (status) { status.textContent = '⚠ zaloguj Stravit · pokazuję lokalny CSV'; status.style.color = 'var(--amber)'; }
+    }
+    updateHeader();
+    renderDatalist();
+    crew = crew.filter(n => DATA.users[n]);
+    if (crew.length === 0) crew = DEFAULT_CREW.filter(n => DATA.users[n]);
+    saveCrew();
+    renderAll();
+  } catch(err) {
+    if (status) { status.textContent = '✗ ' + err.message; status.style.color = 'var(--coral)'; }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '↻ Odśwież dane'; }
+  }
+}
+
+function updateHeader() {
+  const sub = document.getElementById('subtitleText');
+  if (sub) sub.innerHTML = `${fmtDateShort(DATA.dateRange[0])} – ${fmtDateShort(DATA.dateRange[1])} &nbsp;·&nbsp; <b>${DATA.totalUsers}</b> zawodników w pełnej klasyfikacji`;
+  [['tv0', DATA.totals.distance.toLocaleString('pl-PL')],
+   ['tv1', DATA.totals.count.toLocaleString('pl-PL')],
+   ['tv2', Math.round(DATA.totals.points).toLocaleString('pl-PL')],
+   ['tv3', fmtTime(DATA.totals.time)]
+  ].forEach(([id,val]) => { const el = document.getElementById(id); if(el) el.textContent = val; });
+}
+</script>
+<script>
+const PALETTE = ['#ffb700','#2ec4b6','#ef476f','#38bdf8','#a78bfa','#fb923c','#94e2d5','#f472b6'];
+const ME_NAME = 'Jakub Mądro';
+const DEFAULT_CREW = ['Jakub Mądro','Pawel Gołaś','Agnieszka Homa','Tomasz Sędłak'];
+const TYPE_LABELS = {Run:'Bieganie', Walk:'Marsz', Ride:'Kolarstwo', VirtualRide:'Kolarstwo (trenażer)', Hike:'Wędrówka', WeightTraining:'Siłownia', Swim:'Pływanie', Workout:'Trening', InlineSkate:'Rolki'};
+const TYPE_COLORS = {Run:'#ef476f', Walk:'#ffb700', Ride:'#2ec4b6', VirtualRide:'#0891a4', Hike:'#a78bfa', WeightTraining:'#f472b6', Swim:'#38bdf8', Workout:'#fb923c', InlineSkate:'#94a3b8'};
+
+let crew = [];
+let charts = {};
+
+function fmtTime(sec){
+  const h = Math.floor(sec/3600), m = Math.round((sec%3600)/60);
+  return h>0 ? `${h}h ${m}m` : `${m}m`;
+}
+function fmtDateShort(d){
+  const months = ['sty','lut','mar','kwi','maj','cze','lip','sie','wrz','paź','lis','gru'];
+  const [y,mo,da] = d.split('-');
+  return `${parseInt(da)} ${months[parseInt(mo)-1]}`;
+}
+function colorFor(name){
+  if(name === ME_NAME) return '#ef476f';
+  const idx = crew.filter(n=>n!==ME_NAME).indexOf(name);
+  const pal = PALETTE.filter(c=>c!=='#ef476f');
+  return pal[idx % pal.length];
+}
+
+async function loadCrew(){
+  try{
+    const raw = localStorage.getItem('tracked-athletes');
+    if(raw){
+      const arr = JSON.parse(raw);
+      if(Array.isArray(arr) && arr.length){ crew = arr; return; }
+    }
+  }catch(e){ /* brak zapisanej listy */ }
+  crew = DEFAULT_CREW.filter(n => DATA.users[n]);
+}
+async function saveCrew(){
+  try{ localStorage.setItem('tracked-athletes', JSON.stringify(crew)); }
+  catch(e){ console.error('Nie udało się zapisać listy', e); }
+}
+
+function renderChips(){
+  const wrap = document.getElementById('chips');
+  wrap.innerHTML = '';
+  if(crew.length===0){
+    wrap.innerHTML = '<span style="color:var(--muted);font-size:13px;">Ekipa jest pusta — dodaj kogoś poniżej.</span>';
+    return;
+  }
+  crew.forEach(name=>{
+    const u = DATA.users[name];
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (name===ME_NAME ? ' me' : '');
+    chip.innerHTML = `<span>${name}${name===ME_NAME?' <span class="tag-me">JA</span>':''}</span><span class="rankdot">#${u?u.rank:'?'}</span>`;
+    const btn = document.createElement('button');
+    btn.innerHTML = '×';
+    btn.title = 'Usuń z ekipy';
+    btn.onclick = ()=>{ crew = crew.filter(n=>n!==name); saveCrew(); renderAll(); };
+    chip.appendChild(btn);
+    wrap.appendChild(chip);
+  });
+}
+
+function renderDatalist(){
+  const dl = document.getElementById('athleteList');
+  dl.innerHTML = DATA.allNames.map(n=>`<option value="${n}">`).join('');
+}
+
+function renderBibs(){
+  const grid = document.getElementById('bibGrid');
+  grid.innerHTML = '';
+  if(crew.length===0){
+    grid.innerHTML = '<div class="empty">Brak zawodników w ekipie. Dodaj pierwszą osobę powyżej, żeby zobaczyć jej kartę startową.</div>';
+    return;
+  }
+  crew.forEach(name=>{
+    const u = DATA.users[name];
+    if(!u) return;
+    const c = colorFor(name);
+    const card = document.createElement('div');
+    card.className = 'bib';
+    card.innerHTML = `
+      <div class="accentbar" style="background:${c}"></div>
+      <div class="bib-rank">MIEJSCE #${u.rank} / ${DATA.totalUsers}</div>
+      <div class="bib-name">${name}${name===ME_NAME?'<span class="tag-me">JA</span>':''}</div>
+      <div class="bib-points" style="color:${c}">${u.points.toFixed(0)}</div>
+      <div class="bib-points-label">punktów w wyzwaniu</div>
+      <div class="bib-stats">
+        <div><b>${u.distance.toFixed(1)} km</b><span>Dystans</span></div>
+        <div><b>${fmtTime(u.time)}</b><span>Czas</span></div>
+        <div><b>${u.count}</b><span>Aktywności</span></div>
+        <div><b>${u.elevation.toFixed(0)} m</b><span>Przewyższenie</span></div>
+      </div>
+      <svg class="spark" viewBox="0 0 240 34" preserveAspectRatio="none"></svg>
+    `;
+    grid.appendChild(card);
+    drawSpark(card.querySelector('.spark'), DATA.allDates.map(d=>u.daily[d].points), c);
+  });
+}
+
+function drawSpark(svg, values, color){
+  const w=240, h=34, pad=3;
+  const max = Math.max(...values, 1);
+  const step = (w-2*pad)/(values.length-1 || 1);
+  const pts = values.map((v,i)=>{
+    const x = pad + i*step;
+    const y = h - pad - (v/max)*(h-2*pad);
+    return `${x},${y}`;
+  });
+  const line = document.createElementNS('http://www.w3.org/2000/svg','polyline');
+  line.setAttribute('points', pts.join(' '));
+  line.setAttribute('fill','none');
+  line.setAttribute('stroke', color);
+  line.setAttribute('stroke-width','2');
+  line.setAttribute('stroke-linecap','round');
+  line.setAttribute('stroke-linejoin','round');
+  svg.appendChild(line);
+  values.forEach((v,i)=>{
+    const [x,y] = pts[i].split(',');
+    const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    dot.setAttribute('cx',x); dot.setAttribute('cy',y); dot.setAttribute('r', i===values.length-1?'3':'0');
+    dot.setAttribute('fill', color);
+    svg.appendChild(dot);
+  });
+}
+
+function destroyChart(key){ if(charts[key]){ charts[key].destroy(); delete charts[key]; } }
+
+function renderBarChart(){
+  destroyChart('bar');
+  const ctx = document.getElementById('barChart');
+  const present = crew.filter(n=>DATA.users[n]).slice().sort((a,b)=>DATA.users[b].points-DATA.users[a].points);
+  charts.bar = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: present,
+      datasets:[{
+        data: present.map(n=>DATA.users[n].points),
+        backgroundColor: present.map(n=>colorFor(n)),
+        borderRadius:6,
+        maxBarThickness:46,
+      }]
+    },
+    options:{
+      indexAxis:'y',
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:(c)=>` ${c.raw.toFixed(1)} pkt`}}},
+      scales:{
+        x:{grid:{color:'#1c3a54'}, ticks:{color:'#7f9bb4', font:{family:'JetBrains Mono'}}},
+        y:{grid:{display:false}, ticks:{color:'#eef4f8', font:{family:'Inter', size:13}}}
+      }
+    }
+  });
+}
+
+function renderLineChart(){
+  destroyChart('line');
+  const ctx = document.getElementById('lineChart');
+  const present = crew.filter(n=>DATA.users[n]);
+  charts.line = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels: DATA.allDates.map(fmtDateShort),
+      datasets: present.map(name=>({
+        label:name,
+        data: DATA.allDates.map(d=>DATA.users[name].daily[d].points),
+        borderColor: colorFor(name),
+        backgroundColor: colorFor(name)+'22',
+        borderWidth: name===ME_NAME?3:2,
+        tension:0.35,
+        pointRadius:3,
+        pointBackgroundColor: colorFor(name),
+      }))
+    },
+    options:{
+      plugins:{legend:{position:'bottom', labels:{color:'#eef4f8', font:{family:'Inter', size:12}, boxWidth:10, boxHeight:10}}},
+      scales:{
+        x:{grid:{color:'#1c3a54'}, ticks:{color:'#7f9bb4'}},
+        y:{grid:{color:'#1c3a54'}, ticks:{color:'#7f9bb4'}, title:{display:true, text:'punkty / dzień', color:'#7f9bb4'}}
+      }
+    }
+  });
+}
+
+function renderStackChart(){
+  destroyChart('stack');
+  const ctx = document.getElementById('stackChart');
+  const present = crew.filter(n=>DATA.users[n]);
+  const allTypes = Object.keys(TYPE_LABELS).filter(t=>present.some(n=>DATA.users[n].byType[t]));
+  const canvasWrap = ctx.parentElement;
+  canvasWrap.style.height = Math.max(120, present.length*54+60)+'px';
+  charts.stack = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: present,
+      datasets: allTypes.map(t=>({
+        label: TYPE_LABELS[t],
+        data: present.map(n=> (DATA.users[n].byType[t]?.points) || 0),
+        backgroundColor: TYPE_COLORS[t],
+        borderRadius:4,
+      }))
+    },
+    options:{
+      indexAxis:'y',
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom', labels:{color:'#eef4f8', font:{family:'Inter', size:11.5}, boxWidth:10, boxHeight:10}}},
+      scales:{
+        x:{stacked:true, grid:{color:'#1c3a54'}, ticks:{color:'#7f9bb4'}},
+        y:{stacked:true, grid:{display:false}, ticks:{color:'#eef4f8', font:{size:13}}}
+      }
+    }
+  });
+}
+
+function renderTop10(){
+  const tbody = document.getElementById('top10Body');
+  tbody.innerHTML = DATA.topLeaders.map(l=>`
+    <tr class="${crew.includes(l.name)?'tracked':''}">
+      <td class="rankcol">${l.rank}</td>
+      <td>${l.name}${l.name===ME_NAME?' <span class="tag-me">JA</span>':''}</td>
+      <td class="ptscol">${l.points.toFixed(1)}</td>
+    </tr>`).join('');
+}
+
+function renderAll(){
+  renderChips();
+  renderBibs();
+  renderBarChart();
+  renderLineChart();
+  renderStackChart();
+  renderTop10();
+}
+
+document.getElementById('addBtn').onclick = addAthlete;
+document.getElementById('addInput').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addAthlete(); }});
+document.getElementById('authPanel').addEventListener('submit', loginToStravit);
+
+function addAthlete(){
+  const input = document.getElementById('addInput');
+  const msg = document.getElementById('addMsg');
+  const val = input.value.trim();
+  msg.className = 'add-msg';
+  if(!val){ return; }
+  const match = DATA.allNames.find(n=>n.toLowerCase()===val.toLowerCase());
+  if(!match){
+    const close = DATA.allNames.filter(n=>n.toLowerCase().includes(val.toLowerCase())).slice(0,3);
+    msg.className = 'add-msg err';
+    msg.textContent = close.length ? `Nie znalazłem "${val}". Może chodzi o: ${close.join(', ')}?` : `Nie znalazłem zawodnika "${val}" w wyzwaniu.`;
+    return;
+  }
+  if(crew.includes(match)){
+    msg.className = 'add-msg err';
+    msg.textContent = `${match} jest już w Twojej ekipie.`;
+    return;
+  }
+  crew.push(match);
+  saveCrew();
+  input.value = '';
+  msg.textContent = '';
+  renderAll();
+}
+
+(async function init(){
+  // Podepnij przycisk odświeżania
+  const btn = document.getElementById('refreshBtn');
+  if (btn) btn.onclick = refreshData;
+
+  // Załaduj ekipę z localStorage (przed refreshData żeby była dostępna)
+  try {
+    const raw = localStorage.getItem('tracked-athletes');
+    if (raw) { const arr = JSON.parse(raw); if(Array.isArray(arr) && arr.length) crew = arr; }
+  } catch(e) {}
+
+  // Załaduj dane (najpierw próba live, potem fallback lokalny)
+  await refreshData();
+})();
+</script>
+</body>
+</html>
