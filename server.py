@@ -22,7 +22,7 @@ PORT = int(os.environ.get("PORT", "8000"))
 BASE_DIR = Path(__file__).resolve().parent
 BASE_URL = "https://mtupolska.stravit.app"
 DEFAULT_SLUG = "rywalizacja-sportowa"
-CACHE_TTL_SECONDS = 120
+CACHE_TTL_SECONDS = 3600
 STATUS_TEXT = {200: "OK", 400: "Bad Request", 401: "Unauthorized", 404: "Not Found", 502: "Bad Gateway", 403: "Forbidden"}
 
 STRAVIT_EMAIL = os.environ.get("STRAVIT_EMAIL")
@@ -36,8 +36,18 @@ _cache_lock = threading.Lock()
 _cookie_jar = http.cookiejar.CookieJar()
 _opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(_cookie_jar))
 
+# Setup App Insights logging if connection string is provided
+APPINSIGHTS_CONN_STR = os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING")
+if APPINSIGHTS_CONN_STR:
+    try:
+        from azure.monitor.opentelemetry import configure_azure_monitor
+        configure_azure_monitor(connection_string=APPINSIGHTS_CONN_STR)
+        print("Application Insights telemetry configured successfully.", flush=True)
+    except Exception as e:
+        print(f"Warning: Failed to configure App Insights: {e}", flush=True)
+
 try:
-    from azure.storage.blob import BlobServiceClient
+    from azure.data.tables import TableClient
     HAS_AZURE = True
 except ImportError:
     HAS_AZURE = False
@@ -119,10 +129,11 @@ def login_to_stravit(email, password, remember=True):
     encoded = urllib.parse.urlencode(payload).encode("utf-8")
     headers = request_headers("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
     headers["Content-Type"] = "application/x-www-form-urlencoded"
-    fetch_text(f"{BASE_URL}/login", data=encoded, headers=headers)
-
+    response_html = fetch_text(f"{BASE_URL}/login", data=encoded, headers=headers)
     _cache.clear()
-    if not is_logged_in():
+    
+    is_ok = "/logout" in response_html and "Logowanie do Stravit" not in response_html
+    if not is_ok:
         raise AuthRequired("Logowanie do Stravit nie powiodlo sie. Sprawdz email i haslo.")
     return {"ok": True, "loggedIn": True}
 
@@ -362,17 +373,21 @@ def build_data_from_activities(activities):
 def save_profile_index(index_payload):
     if HAS_AZURE and AZURE_STORAGE_CONNECTION_STRING:
         try:
-            blob_service_client = BlobServiceClient.from_connection_string(AZURE_STORAGE_CONNECTION_STRING)
-            container_client = blob_service_client.get_container_client(BLOB_CONTAINER_NAME)
+            table_client = TableClient.from_connection_string(conn_str=AZURE_STORAGE_CONNECTION_STRING, table_name="crews")
             try:
-                container_client.create_container()
+                table_client.create_table()
             except Exception:
                 pass
-            blob_client = blob_service_client.get_blob_client(container=BLOB_CONTAINER_NAME, blob=PROFILE_INDEX_BLOB)
-            blob_client.upload_blob(json.dumps(index_payload, ensure_ascii=False), overwrite=True)
+            entity = {
+                "PartitionKey": "index",
+                "RowKey": "profiles-index",
+                "payload": json.dumps(index_payload, ensure_ascii=False)
+            }
+            table_client.upsert_entity(entity)
+            print("Saved profile index to Azure Table Storage.")
             return True
         except Exception as e:
-            print(f"Error saving profile index to Azure Blob: {e}")
+            print(f"Error saving profile index to Azure Table: {e}")
 
     try:
         local_dir = BASE_DIR / "data" / "crews"
@@ -388,15 +403,18 @@ def load_profile_summaries():
     payload = []
     if HAS_AZURE and AZURE_STORAGE_CONNECTION_STRING:
         try:
-            blob_service_client = BlobServiceClient.from_connection_string(AZURE_STORAGE_CONNECTION_STRING)
-            blob_client = blob_service_client.get_blob_client(container=BLOB_CONTAINER_NAME, blob=PROFILE_INDEX_BLOB)
-            if blob_client.exists():
-                data_str = blob_client.download_blob().readall().decode("utf-8")
-                loaded = json.loads(data_str)
-                if isinstance(loaded, list):
-                    payload = loaded
+            table_client = TableClient.from_connection_string(conn_str=AZURE_STORAGE_CONNECTION_STRING, table_name="crews")
+            try:
+                entity = table_client.get_entity(partition_key="index", row_key="profiles-index")
+                data_str = entity.get("payload")
+                if data_str:
+                    loaded = json.loads(data_str)
+                    if isinstance(loaded, list):
+                        payload = loaded
+            except Exception:
+                pass
         except Exception as e:
-            print(f"Error loading profile index from Azure Blob: {e}")
+            print(f"Error loading profile index from Azure Table: {e}")
 
     if not payload:
         try:
@@ -433,17 +451,21 @@ def save_crew_data(crew_id, payload):
     data_str = json.dumps(profile_data, ensure_ascii=False)
     if HAS_AZURE and AZURE_STORAGE_CONNECTION_STRING:
         try:
-            blob_service_client = BlobServiceClient.from_connection_string(AZURE_STORAGE_CONNECTION_STRING)
-            container_client = blob_service_client.get_container_client(BLOB_CONTAINER_NAME)
+            table_client = TableClient.from_connection_string(conn_str=AZURE_STORAGE_CONNECTION_STRING, table_name="crews")
             try:
-                container_client.create_container()
+                table_client.create_table()
             except Exception:
                 pass
-            blob_client = blob_service_client.get_blob_client(container=BLOB_CONTAINER_NAME, blob=f"profiles/{profile_data['id']}.json")
-            blob_client.upload_blob(data_str, overwrite=True)
-            print(f"Saved profile {profile_data['id']} to Azure Blob Storage.")
+            entity = {
+                "PartitionKey": "profiles",
+                "RowKey": profile_data["id"],
+                "me": profile_data["me"],
+                "members": json.dumps(profile_data["members"], ensure_ascii=False)
+            }
+            table_client.upsert_entity(entity)
+            print(f"Saved profile {profile_data['id']} to Azure Table Storage.")
         except Exception as e:
-            print(f"Error saving profile to Azure Blob: {e}")
+            print(f"Error saving profile to Azure Table: {e}")
 
     try:
         local_dir = BASE_DIR / "data" / "crews" / "profiles"
@@ -475,14 +497,21 @@ def save_crew_data(crew_id, payload):
 def load_crew_data(crew_id):
     if HAS_AZURE and AZURE_STORAGE_CONNECTION_STRING:
         try:
-            blob_service_client = BlobServiceClient.from_connection_string(AZURE_STORAGE_CONNECTION_STRING)
-            blob_client = blob_service_client.get_blob_client(container=BLOB_CONTAINER_NAME, blob=f"profiles/{crew_id}.json")
-            if blob_client.exists():
-                stream = blob_client.download_blob()
-                data_str = stream.readall().decode("utf-8")
-                return json.loads(data_str)
+            table_client = TableClient.from_connection_string(conn_str=AZURE_STORAGE_CONNECTION_STRING, table_name="crews")
+            try:
+                entity = table_client.get_entity(partition_key="profiles", row_key=crew_id)
+                me = entity.get("me") or ""
+                members_str = entity.get("members") or "[]"
+                members = json.loads(members_str)
+                return {
+                    "id": crew_id,
+                    "me": me,
+                    "members": members
+                }
+            except Exception:
+                pass
         except Exception as e:
-            print(f"Error loading profile from Azure Blob: {e}")
+            print(f"Error loading profile from Azure Table: {e}")
 
     try:
         local_file = BASE_DIR / "data" / "crews" / "profiles" / f"{crew_id}.json"
@@ -649,6 +678,15 @@ def app(environ, start_response):
 
     return _send_bytes(start_response, 404, b"Not Found")
 
+
+# Wrap the app with OpenTelemetry middleware for full request tracing in Azure
+if APPINSIGHTS_CONN_STR:
+    try:
+        from opentelemetry.instrumentation.wsgi import OpenTelemetryMiddleware
+        app = OpenTelemetryMiddleware(app)
+        print("WSGI application wrapped with OpenTelemetry middleware for telemetry.", flush=True)
+    except Exception as e:
+        print(f"Warning: Failed to wrap WSGI app with OpenTelemetry: {e}", flush=True)
 
 application = app
 

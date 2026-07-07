@@ -80,6 +80,11 @@
     align-items: center;
     gap: 20px;
   }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
   .title-block .eyebrow {
     font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 11px;
@@ -250,20 +255,110 @@
     min-height: 14px;
   }
 
-  /* ---- Grid Layout ---- */
+  /* ---- Grid/Flex Layout ---- */
   .dashboard-grid-layout {
-    display: grid;
-    grid-template-columns: 340px 1fr;
+    display: flex;
     gap: 24px;
     align-items: start;
     min-width: 0;
   }
 
   /* ---- Sidebar ---- */
+  /* ---- Sidebar ---- */
   .dashboard-sidebar {
+    width: 340px;
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 20px;
+    transition: width 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+    overflow: hidden;
+  }
+  .sidebar-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 4px;
+    height: 40px;
+    flex-shrink: 0;
+  }
+  .sidebar-burger-btn {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text);
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+  .sidebar-burger-btn:hover {
+    color: var(--teal);
+    border-color: var(--teal);
+    background: rgba(6, 182, 212, 0.05);
+  }
+  .sidebar-toggle-label {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--muted);
+    transition: opacity 0.25s ease;
+    white-space: nowrap;
+    opacity: 1;
+  }
+  
+  /* Collapsed state styles */
+  .sidebar-collapsed .dashboard-sidebar {
+    width: 60px;
+  }
+  .sidebar-collapsed .sidebar-toggle-row {
+    justify-content: center;
+    padding: 0;
+  }
+  .sidebar-collapsed .sidebar-toggle-label {
+    opacity: 0;
+    width: 0;
+    pointer-events: none;
+    display: none;
+  }
+  .sidebar-collapsed .sidebar-section {
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 12px;
+    min-height: 40px;
+  }
+  .sidebar-collapsed .sidebar-section .section-head {
+    margin-bottom: 0;
+    justify-content: center;
+    width: 100%;
+    gap: 0;
+  }
+  .sidebar-collapsed .sidebar-section .section-head h2,
+  .sidebar-collapsed .sidebar-section .section-head .section-hint,
+  .sidebar-collapsed .sidebar-section > *:not(.section-head) {
+    display: none !important;
+  }
+  .sidebar-collapsed .sidebar-section .section-num {
+    margin: 0;
+    font-size: 12px;
+    padding: 4px 6px;
+    background: rgba(6, 182, 212, 0.08);
+    border-color: rgba(6, 182, 212, 0.25);
+    color: var(--teal);
+    box-shadow: 0 0 8px rgba(6, 182, 212, 0.15);
+  }
+  .dashboard-main {
+    flex: 1;
+    min-width: 0;
   }
   .sidebar-section {
     padding: 22px 24px;
@@ -810,8 +905,26 @@
       padding: 16px 14px 40px;
     }
     .dashboard-grid-layout {
-      grid-template-columns: 1fr; /* Stacks sidebar and main area */
+      flex-direction: column;
+      align-items: stretch;
       gap: 20px;
+    }
+    .dashboard-sidebar {
+      width: 100%;
+      max-height: 2000px;
+      transition: max-height 0.35s ease, margin-bottom 0.35s ease, opacity 0.25s ease, visibility 0.35s;
+    }
+    .sidebar-collapsed .dashboard-sidebar {
+      width: 100%;
+      max-height: 0;
+      margin-bottom: -20px;
+      margin-right: 0;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .dashboard-main {
+      width: 100%;
     }
   }
 
@@ -861,6 +974,11 @@
     }
     .ticker-item:nth-child(3), .ticker-item:nth-child(4) {
       border-bottom: none;
+    }
+    .header-left {
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
     }
     .title-block {
       text-align: center;
@@ -1039,9 +1157,15 @@
     </div>
   </header>
 
-  <div class="dashboard-grid-layout">
+  <div class="dashboard-grid-layout" id="dashboardGridLayout">
     <!-- Sidebar Controls -->
-    <aside class="dashboard-sidebar">
+    <aside class="dashboard-sidebar" id="dashboardSidebar">
+      <div class="sidebar-toggle-row">
+        <button id="toggleSidebarBtn" class="sidebar-burger-btn" title="Zwiń/Rozwiń panel">
+          ☰
+        </button>
+        <span class="sidebar-toggle-label">Filtry i ekipa</span>
+      </div>
       <section class="sidebar-section glass-card">
         <div class="section-head">
           <span class="section-num">01</span>
@@ -1391,7 +1515,7 @@ async function loginToStravit(event) {
     password.value = '';
     setAuthPanelVisible(false);
     if (msg) msg.textContent = '';
-    await refreshData(true);
+    await refreshData(false);
   } catch(err) {
     if (msg) { msg.textContent = err.message; msg.style.color = 'var(--coral)'; }
   } finally {
@@ -2042,6 +2166,25 @@ function addAthlete(){
 }
 
 (async function init(){
+  // Obsługa zwijania panelu bocznego
+  const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
+  const gridLayout = document.getElementById('dashboardGridLayout');
+  if (toggleSidebarBtn && gridLayout) {
+    const isCollapsed = localStorage.getItem('dashboard-sidebar-collapsed') === 'true';
+    if (isCollapsed) {
+      gridLayout.classList.add('sidebar-collapsed');
+    }
+    toggleSidebarBtn.onclick = () => {
+      const collapsedNow = gridLayout.classList.toggle('sidebar-collapsed');
+      localStorage.setItem('dashboard-sidebar-collapsed', collapsedNow ? 'true' : 'false');
+      setTimeout(() => {
+        Object.values(charts).forEach(c => {
+          if (c) c.resize();
+        });
+      }, 360);
+    };
+  }
+
   // Podepnij przycisk odświeżania
   const btn = document.getElementById('refreshBtn');
   if (btn) btn.onclick = () => refreshData(true);
