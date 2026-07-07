@@ -60,6 +60,13 @@
 
   /* ---- Crew management ---- */
   .crew-panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px;}
+  .profile-card{margin-top:16px;padding:14px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,0.03);display:grid;gap:10px;}
+  .profile-card .profile-title{font-size:13px;font-weight:600;color:var(--amber);text-transform:uppercase;letter-spacing:.08em;}
+  .profile-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;align-items:end;}
+  .profile-grid label{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--muted);}
+  .profile-grid select, .profile-grid input{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13.5px;}
+  .profile-grid select:focus, .profile-grid input:focus{outline:2px solid var(--amber);outline-offset:1px;}
+  .profile-grid button{border:none;border-radius:8px;padding:10px 14px;font-weight:600;font-size:13.5px;cursor:pointer;font-family:'Inter',sans-serif;}
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
   .chip{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--line);border-radius:100px;padding:6px 6px 6px 14px;font-size:13.5px;}
   .chip.me{border-color:var(--coral);background:rgba(239,71,111,0.12);}
@@ -161,11 +168,35 @@
         <button class="add-btn" id="addBtn">+ Dodaj do ekipy</button>
       </div>
       <div class="add-msg" id="addMsg"></div>
+      <div class="profile-card">
+        <div class="profile-title">Profil użytkownika</div>
+        <div class="profile-grid">
+          <label>
+            <span>Wybierz zapisany profil</span>
+            <select id="profileSelect" autocomplete="off">
+              <option value="">-- nie ma jeszcze profilu --</option>
+            </select>
+          </label>
+          <button id="loadProfileBtn" style="background: var(--surface2); color: var(--text); border: 1px solid var(--line);">Wczytaj</button>
+        </div>
+        <div id="profileHint" class="add-msg" style="margin-top: 4px; color: var(--muted);">Nie istnieje? Kliknij poniżej, żeby utworzyć profil.</div>
+        <div id="createProfileBlock" class="profile-grid" style="margin-top: 8px; display: none;">
+          <label>
+            <span>Wybierz osobę jako swój profil (JA)</span>
+            <select id="meInput" autocomplete="off">
+              <option value="">-- wybierz osobę --</option>
+            </select>
+          </label>
+          <button id="createProfileBtn" style="background: var(--amber); color: #1a1200;">Utwórz profil</button>
+        </div>
+        <button id="toggleCreateProfileBtn" style="margin-top: 6px; background: transparent; color: var(--amber); border: 1px dashed var(--line); padding: 10px 12px; text-align: left;">+ Utwórz nowy profil</button>
+        <div id="profileMsg" class="add-msg" style="margin-top: 4px;"></div>
+      </div>
     </div>
   </section>
 
   <section>
-    <div class="section-head"><span class="section-num">02</span><h2>Karty startowe</h2><span class="section-hint">miejsce w klasyfikacji generalnej (na 377)</span></div>
+    <div class="section-head"><span class="section-num">02</span><h2>Karty startowe</h2><span class="section-hint">miejsce w klasyfikacji generalnej</span></div>
     <div class="bib-grid" id="bibGrid"></div>
   </section>
 
@@ -194,7 +225,7 @@
     </div>
   </section>
 
-  <footer>DANE: EKSPORT WYZWANIA · 1–6 LIPCA 2026 · 377 UCZESTNIKÓW</footer>
+  <footer id="dashboardFooter">DANE: EKSPORT WYZWANIA · 1–6 LIPCA 2026 · 377 UCZESTNIKÓW</footer>
 </div>
 
 <script>
@@ -336,12 +367,12 @@ function buildDATA(csvText) {
 const CSV_FILENAME = 'rywalizacja-sportowa-activities-2026-07-06_14_05_56.csv';
 
 const CHALLENGE_SLUG = 'rywalizacja-sportowa';
-const API_DATA_URL = `/api/challenge/${CHALLENGE_SLUG}/data`;
 
 let DATA = null; // zostanie wypełnione po załadowaniu API
 
-async function fetchApiData() {
-  const resp = await fetch(API_DATA_URL, {
+async function fetchApiData(force = false) {
+  const url = `/api/challenge/${CHALLENGE_SLUG}/data` + (force ? '?force=true' : '');
+  const resp = await fetch(url, {
     method: 'GET',
     cache: 'no-store',
     headers: { 'accept': 'application/json' }
@@ -386,7 +417,7 @@ async function loginToStravit(event) {
     password.value = '';
     setAuthPanelVisible(false);
     if (msg) msg.textContent = '';
-    await refreshData();
+    await refreshData(true);
   } catch(err) {
     if (msg) { msg.textContent = err.message; msg.style.color = 'var(--coral)'; }
   } finally {
@@ -394,29 +425,52 @@ async function loginToStravit(event) {
   }
 }
 
-async function refreshData() {
+async function refreshData(force = false) {
   const btn = document.getElementById('refreshBtn');
   const status = document.getElementById('refreshStatus');
   if (btn) { btn.disabled = true; btn.textContent = '⟳ Pobieranie…'; }
   if (status) { status.textContent = ''; status.style.color = 'var(--muted)'; }
   try {
     try {
-      DATA = await fetchApiData();
+      DATA = await fetchApiData(force);
       if (status) status.textContent = '✓ API Stravit · ' + new Date().toLocaleTimeString('pl-PL', {hour:'2-digit',minute:'2-digit'});
       setAuthPanelVisible(false);
+      try { localStorage.setItem('dashboard-cached-data', JSON.stringify(DATA)); } catch(e){}
     } catch(apiErr) {
-      console.warn('API fetch failed, using local CSV:', apiErr.message);
+      console.warn('API fetch failed, using local cache or CSV:', apiErr.message);
       if (apiErr.authRequired) setAuthPanelVisible(true);
-      let csvText;
-      csvText = await loadCSV(CSV_FILENAME);
-      DATA = buildDATA(csvText);
-      if (status) { status.textContent = '⚠ zaloguj Stravit · pokazuję lokalny CSV'; status.style.color = 'var(--amber)'; }
+      if (!DATA) {
+        let csvText;
+        csvText = await loadCSV(CSV_FILENAME);
+        DATA = buildDATA(csvText);
+      }
+      if (status) { status.textContent = '⚠ zaloguj Stravit · pokazuję ostatnie dane'; status.style.color = 'var(--amber)'; }
     }
+    
+    // Pobierz ekipę z serwera
+    try {
+      const crewResp = await fetch(`/api/crew?id=${crewId}`);
+      if (crewResp.ok) {
+        const crewData = await crewResp.json();
+        if (Array.isArray(crewData)) {
+          crew = crewData;
+        }
+      }
+    } catch(crewErr) {
+      console.warn('Failed to load crew from server:', crewErr);
+    }
+    
     updateHeader();
     renderDatalist();
+    await loadSavedProfiles();
+    renderProfileControls();
+
+    loadCrew();
     crew = crew.filter(n => DATA.users[n]);
-    if (crew.length === 0) crew = DEFAULT_CREW.filter(n => DATA.users[n]);
-    saveCrew();
+    if (ME_NAME && !crew.includes(ME_NAME)) {
+      crew.unshift(ME_NAME);
+    }
+    await saveCrew();
     renderAll();
   } catch(err) {
     if (status) { status.textContent = '✗ ' + err.message; status.style.color = 'var(--coral)'; }
@@ -433,17 +487,139 @@ function updateHeader() {
    ['tv2', Math.round(DATA.totals.points).toLocaleString('pl-PL')],
    ['tv3', fmtTime(DATA.totals.time)]
   ].forEach(([id,val]) => { const el = document.getElementById(id); if(el) el.textContent = val; });
+
+  const footer = document.getElementById('dashboardFooter');
+  if (footer && DATA.dateRange) {
+    footer.textContent = `DANE: EKSPORT WYZWANIA · ${fmtDateShort(DATA.dateRange[0]).toUpperCase()} – ${fmtDateShort(DATA.dateRange[1]).toUpperCase()} · ${DATA.totalUsers} UCZESTNIKÓW`;
+  }
 }
 </script>
 <script>
 const PALETTE = ['#ffb700','#2ec4b6','#ef476f','#38bdf8','#a78bfa','#fb923c','#94e2d5','#f472b6'];
-const ME_NAME = 'Jakub Mądro';
-const DEFAULT_CREW = ['Jakub Mądro','Pawel Gołaś','Agnieszka Homa','Tomasz Sędłak'];
+let ME_NAME = localStorage.getItem('dashboard-me') || '';
+let crewId = localStorage.getItem('dashboard-crew-id');
+if (!crewId) {
+  crewId = 'crew_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  localStorage.setItem('dashboard-crew-id', crewId);
+}
+let profileId = localStorage.getItem('dashboard-profile-id') || '';
+let savedProfiles = [];
 const TYPE_LABELS = {Run:'Bieganie', Walk:'Marsz', Ride:'Kolarstwo', VirtualRide:'Kolarstwo (trenażer)', Hike:'Wędrówka', WeightTraining:'Siłownia', Swim:'Pływanie', Workout:'Trening', InlineSkate:'Rolki'};
 const TYPE_COLORS = {Run:'#ef476f', Walk:'#ffb700', Ride:'#2ec4b6', VirtualRide:'#0891a4', Hike:'#a78bfa', WeightTraining:'#f472b6', Swim:'#38bdf8', Workout:'#fb923c', InlineSkate:'#94a3b8'};
 
 let crew = [];
 let charts = {};
+
+function getCrewStorageKey(){
+  return profileId ? `tracked-athletes-${profileId}` : 'tracked-athletes';
+}
+
+function resolveName(value){
+  const trimmed = (value || '').trim();
+  if (!trimmed || !DATA?.allNames) return null;
+  const exact = DATA.allNames.find(n => n.toLowerCase() === trimmed.toLowerCase());
+  if (exact) return exact;
+  const close = DATA.allNames.filter(n => n.toLowerCase().includes(trimmed.toLowerCase())).slice(0, 3);
+  return close[0] || null;
+}
+
+function renderProfileControls(){
+  const select = document.getElementById('profileSelect');
+  const meInput = document.getElementById('meInput');
+  const createBlock = document.getElementById('createProfileBlock');
+  const toggleBtn = document.getElementById('toggleCreateProfileBtn');
+  const hint = document.getElementById('profileHint');
+  if (select) {
+    select.innerHTML = '<option value="">-- nie ma jeszcze profilu --</option>' +
+      savedProfiles.map(p => `<option value="${p.id}">${(p.me || 'Osoba').replace(/</g,'&lt;')}</option>`).join('');
+    if (profileId) {
+      select.value = profileId;
+    }
+  }
+  if (meInput && DATA?.allNames) {
+    meInput.innerHTML = '<option value="">-- wybierz osobę --</option>' +
+      DATA.allNames.map(n => `<option value="${n}">${n}</option>`).join('');
+    if (ME_NAME) {
+      meInput.value = ME_NAME;
+    }
+  }
+  if (createBlock) {
+    createBlock.style.display = 'none';
+  }
+  if (toggleBtn) {
+    toggleBtn.style.display = 'block';
+    toggleBtn.textContent = '+ Utwórz nowy profil';
+  }
+  if (hint) {
+    hint.textContent = profileId && ME_NAME
+      ? `Aktywny profil: ${ME_NAME}`
+      : 'Nie istnieje? Kliknij poniżej, żeby utworzyć profil.';
+  }
+}
+
+function applyProfile(profile){
+  if (!profile) return;
+  profileId = profile.id || '';
+  ME_NAME = profile.me || '';
+  localStorage.setItem('dashboard-profile-id', profileId);
+  localStorage.setItem('dashboard-me', ME_NAME);
+  const members = Array.isArray(profile.members) ? profile.members.filter(Boolean) : [];
+  crew = members.filter(n => DATA?.users?.[n]);
+  if (ME_NAME && !crew.includes(ME_NAME) && DATA?.users?.[ME_NAME]) {
+    crew.unshift(ME_NAME);
+  }
+  localStorage.setItem(getCrewStorageKey(), JSON.stringify(crew));
+  renderProfileControls();
+  renderAll();
+}
+
+async function loadSavedProfiles(){
+  try {
+    const resp = await fetch('/api/crew/profiles');
+    if (!resp.ok) throw new Error('profiles');
+    const data = await resp.json();
+    savedProfiles = Array.isArray(data) ? data : [];
+    renderProfileControls();
+  } catch (e) {
+    savedProfiles = [];
+  }
+}
+
+async function createProfile(){
+  const meInput = document.getElementById('meInput');
+  const profileMsg = document.getElementById('profileMsg');
+  const meValue = (meInput?.value || '').trim();
+  if (!meValue) {
+    if (profileMsg) {
+      profileMsg.textContent = 'Wybierz osobę z listy.';
+      profileMsg.className = 'add-msg err';
+    }
+    return;
+  }
+
+  await loadSavedProfiles();
+  const duplicate = savedProfiles.find(p => (p.me || '').trim().toLowerCase() === meValue.trim().toLowerCase());
+  if (duplicate && duplicate.id !== profileId) {
+    if (profileMsg) {
+      profileMsg.textContent = `Profil dla ${meValue} już istnieje.`;
+      profileMsg.className = 'add-msg err';
+    }
+    return;
+  }
+
+  const resolvedMe = meValue;
+  profileId = `profile_${Date.now().toString(36)}`;
+  ME_NAME = resolvedMe;
+  crew = [];
+  await saveCrew();
+  await loadSavedProfiles();
+  renderProfileControls();
+  if (profileMsg) {
+    profileMsg.textContent = `Profil dla ${ME_NAME} utworzony.`;
+    profileMsg.className = 'add-msg';
+  }
+  renderAll();
+}
 
 function fmtTime(sec){
   const h = Math.floor(sec/3600), m = Math.round((sec%3600)/60);
@@ -461,19 +637,38 @@ function colorFor(name){
   return pal[idx % pal.length];
 }
 
-async function loadCrew(){
+function loadCrew(){
   try{
-    const raw = localStorage.getItem('tracked-athletes');
+    const raw = localStorage.getItem(getCrewStorageKey());
     if(raw){
       const arr = JSON.parse(raw);
-      if(Array.isArray(arr) && arr.length){ crew = arr; return; }
+      if(Array.isArray(arr) && arr.length){ crew = arr.filter(n => DATA?.users?.[n]); return; }
     }
-  }catch(e){ /* brak zapisanej listy */ }
-  crew = DEFAULT_CREW.filter(n => DATA.users[n]);
+  }catch(e){}
+  crew = [];
+  if (ME_NAME && DATA?.users?.[ME_NAME]) {
+    crew.push(ME_NAME);
+  }
 }
+
 async function saveCrew(){
-  try{ localStorage.setItem('tracked-athletes', JSON.stringify(crew)); }
-  catch(e){ console.error('Nie udało się zapisać listy', e); }
+  try{ localStorage.setItem(getCrewStorageKey(), JSON.stringify(crew)); }
+  catch(e){}
+  try {
+    localStorage.setItem('dashboard-profile-id', profileId);
+    localStorage.setItem('dashboard-me', ME_NAME);
+    await fetch(`/api/crew?id=${encodeURIComponent(profileId || crewId)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: profileId || crewId,
+        me: ME_NAME,
+        members: crew
+      })
+    });
+  } catch(err) {
+    console.error('Nie udało się zapisać profilu na serwerze:', err);
+  }
 }
 
 function renderChips(){
@@ -670,6 +865,46 @@ function renderAll(){
 document.getElementById('addBtn').onclick = addAthlete;
 document.getElementById('addInput').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addAthlete(); }});
 document.getElementById('authPanel').addEventListener('submit', loginToStravit);
+document.getElementById('createProfileBtn').onclick = createProfile;
+document.getElementById('toggleCreateProfileBtn').onclick = ()=>{
+  const createBlock = document.getElementById('createProfileBlock');
+  if (!createBlock) return;
+  const isVisible = createBlock.style.display === 'grid';
+  createBlock.style.display = isVisible ? 'none' : 'grid';
+  const toggleBtn = document.getElementById('toggleCreateProfileBtn');
+  if (toggleBtn) {
+    toggleBtn.textContent = isVisible ? '+ Utwórz nowy profil' : '− Zamknij tworzenie profilu';
+  }
+};
+document.getElementById('loadProfileBtn').onclick = async ()=>{
+  const select = document.getElementById('profileSelect');
+  const id = select?.value;
+  if (!id) return;
+  const profile = savedProfiles.find(p => p.id === id);
+  if (profile) {
+    applyProfile({ id: profile.id, name: profile.name, me: profile.me, members: [] });
+    try {
+      const resp = await fetch(`/api/crew?id=${encodeURIComponent(id)}`);
+      if (resp.ok) {
+        const payload = await resp.json();
+        if (payload && typeof payload === 'object') {
+          applyProfile(payload);
+        }
+      }
+    } catch (e) {}
+  }
+};
+document.getElementById('profileSelect').onchange = ()=>{
+  const select = document.getElementById('profileSelect');
+  if (!select?.value) {
+    profileId = '';
+    ME_NAME = '';
+    localStorage.removeItem('dashboard-profile-id');
+    localStorage.removeItem('dashboard-me');
+    crew = [];
+    renderAll();
+  }
+};
 
 function addAthlete(){
   const input = document.getElementById('addInput');
@@ -699,16 +934,52 @@ function addAthlete(){
 (async function init(){
   // Podepnij przycisk odświeżania
   const btn = document.getElementById('refreshBtn');
-  if (btn) btn.onclick = refreshData;
+  if (btn) btn.onclick = () => refreshData(true);
 
-  // Załaduj ekipę z localStorage (przed refreshData żeby była dostępna)
+  // Wczytaj z lokalnego cache przeglądarki dla natychmiastowego startu
   try {
-    const raw = localStorage.getItem('tracked-athletes');
-    if (raw) { const arr = JSON.parse(raw); if(Array.isArray(arr) && arr.length) crew = arr; }
+    const cachedData = localStorage.getItem('dashboard-cached-data');
+    if (cachedData) {
+      DATA = JSON.parse(cachedData);
+      loadCrew();
+      updateHeader();
+      renderAll();
+    }
+  } catch(e) {
+    console.warn('Failed to load initial cached data:', e);
+  }
+
+  // Sprawdź status autoryzacji serwera
+  try {
+    const statusResp = await fetch('/api/auth/status');
+    if (statusResp.ok) {
+      const statusData = await statusResp.json();
+      if (statusData.hasMasterCredentials) {
+        const authMsg = document.getElementById('authMsg');
+        if (authMsg) {
+          authMsg.textContent = 'Autoryzacja serwera włączona (Master)';
+          authMsg.style.color = 'var(--teal)';
+        }
+      }
+    }
   } catch(e) {}
 
-  // Załaduj dane (najpierw próba live, potem fallback lokalny)
-  await refreshData();
+  // Załaduj dane
+  await refreshData(false);
+
+  if (profileId) {
+    try {
+      const resp = await fetch(`/api/crew?id=${encodeURIComponent(profileId)}`);
+      if (resp.ok) {
+        const payload = await resp.json();
+        if (payload && typeof payload === 'object') {
+          applyProfile(payload);
+        }
+      }
+    } catch (e) {
+      console.warn('Nie udało się wczytać profilu po starcie:', e);
+    }
+  }
 })();
 </script>
 </body>
