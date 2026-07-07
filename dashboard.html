@@ -67,6 +67,14 @@
   .profile-grid select, .profile-grid input{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13.5px;}
   .profile-grid select:focus, .profile-grid input:focus{outline:2px solid var(--amber);outline-offset:1px;}
   .profile-grid button{border:none;border-radius:8px;padding:10px 14px;font-weight:600;font-size:13.5px;cursor:pointer;font-family:'Inter',sans-serif;}
+  .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:12px;}
+  .stat-card{background:linear-gradient(135deg, rgba(255,183,0,0.13), rgba(46,196,182,0.08));border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-height:92px;display:flex;flex-direction:column;justify-content:space-between;}
+  .stat-card .stat-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);}
+  .stat-card .stat-value{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--text);}
+  .stat-card .stat-sub{font-size:12px;color:var(--muted);}
+  .search-box{position:relative;}
+  .search-box input{width:100%;padding-right:38px;}
+  .search-box .search-icon{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none;}
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
   .chip{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--line);border-radius:100px;padding:6px 6px 6px 14px;font-size:13.5px;}
   .chip.me{border-color:var(--coral);background:rgba(239,71,111,0.12);}
@@ -106,9 +114,9 @@
   .empty{color:var(--muted);font-size:13.5px;padding:30px 10px;text-align:center;border:1px dashed var(--line);border-radius:12px;}
 
   /* ---- chart containers ---- */
-  .chart-box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px 8px;}
+  .chart-box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px 8px;width:100%;position:relative;overflow:hidden;}
   .chart-box.tall{height:340px;}
-  canvas{max-width:100%;}
+  .chart-box canvas{display:block;width:100% !important;height:100% !important;max-width:100%;}
 
   /* ---- leaderboard table ---- */
   table{width:100%;border-collapse:collapse;font-size:13.5px;}
@@ -163,13 +171,17 @@
     <div class="crew-panel">
       <div class="chips" id="chips"></div>
       <div class="add-row">
-        <input list="athleteList" id="addInput" placeholder="Wpisz imię i nazwisko zawodnika…" autocomplete="off">
-        <datalist id="athleteList"></datalist>
+        <div class="search-box" style="flex:1; min-width:220px;">
+          <input list="athleteList" id="addInput" placeholder="Szukaj zawodnika i dodaj do ekipy…" autocomplete="off">
+          <datalist id="athleteList"></datalist>
+          <span class="search-icon">⌕</span>
+        </div>
         <button class="add-btn" id="addBtn">+ Dodaj do ekipy</button>
       </div>
       <div class="add-msg" id="addMsg"></div>
       <div class="profile-card">
         <div class="profile-title">Profil użytkownika</div>
+        <div class="profile-subtitle">Wybierz profil lub utwórz nowy — wszystko będzie pamiętane.</div>
         <div class="profile-grid">
           <label>
             <span>Wybierz zapisany profil</span>
@@ -177,20 +189,20 @@
               <option value="">-- nie ma jeszcze profilu --</option>
             </select>
           </label>
-          <button id="loadProfileBtn" style="background: var(--surface2); color: var(--text); border: 1px solid var(--line);">Wczytaj</button>
+          <button id="loadProfileBtn" style="background: var(--surface2); color: var(--text); border: 1px solid rgba(255,255,255,0.08);">Wczytaj</button>
         </div>
-        <div id="profileHint" class="add-msg" style="margin-top: 4px; color: var(--muted);">Nie istnieje? Kliknij poniżej, żeby utworzyć profil.</div>
-        <div id="createProfileBlock" class="profile-grid" style="margin-top: 8px; display: none;">
+        <div id="profileHint" class="add-msg" style="margin-top: 2px; color: var(--muted);">Nie istnieje? Kliknij poniżej, żeby utworzyć profil.</div>
+        <div id="createProfileBlock" class="profile-grid" style="margin-top: 6px; display: none;">
           <label>
             <span>Wybierz osobę jako swój profil (JA)</span>
             <select id="meInput" autocomplete="off">
               <option value="">-- wybierz osobę --</option>
             </select>
           </label>
-          <button id="createProfileBtn" style="background: var(--amber); color: #1a1200;">Utwórz profil</button>
+          <button id="createProfileBtn" style="background: linear-gradient(135deg, var(--amber), #ffcf4d); color: #1a1200;">Utwórz profil</button>
         </div>
-        <button id="toggleCreateProfileBtn" style="margin-top: 6px; background: transparent; color: var(--amber); border: 1px dashed var(--line); padding: 10px 12px; text-align: left;">+ Utwórz nowy profil</button>
-        <div id="profileMsg" class="add-msg" style="margin-top: 4px;"></div>
+        <button id="toggleCreateProfileBtn" style="margin-top: 2px; background: rgba(255,255,255,0.04); color: var(--amber); border: 1px solid rgba(255,255,255,0.08); padding: 10px 12px; text-align: left; border-radius: 10px;">+ Utwórz nowy profil</button>
+        <div id="profileMsg" class="add-msg" style="margin-top: 2px;"></div>
       </div>
     </div>
   </section>
@@ -201,22 +213,27 @@
   </section>
 
   <section>
-    <div class="section-head"><span class="section-num">03</span><h2>Punkty — porównanie ekipy</h2></div>
+    <div class="section-head"><span class="section-num">04</span><h2>Punkty — porównanie ekipy</h2></div>
     <div class="chart-box tall"><canvas id="barChart"></canvas></div>
   </section>
 
   <section>
-    <div class="section-head"><span class="section-num">04</span><h2>Dzienna forma</h2><span class="section-hint">punkty zdobyte każdego dnia wyzwania</span></div>
+    <div class="section-head"><span class="section-num">05</span><h2>Dzienna forma</h2><span class="section-hint">punkty zdobyte każdego dnia wyzwania</span></div>
     <div class="chart-box tall"><canvas id="lineChart"></canvas></div>
   </section>
 
   <section>
-    <div class="section-head"><span class="section-num">05</span><h2>Z czego te punkty</h2><span class="section-hint">rozkład punktów według typu treningu</span></div>
+    <div class="section-head"><span class="section-num">06</span><h2>Z czego te punkty</h2><span class="section-hint">rozkład punktów według typu treningu</span></div>
     <div class="chart-box" style="height:auto;padding-bottom:18px;"><canvas id="stackChart"></canvas></div>
   </section>
 
   <section>
-    <div class="section-head"><span class="section-num">06</span><h2>Top 10 generalnej</h2><span class="section-hint">Twoja ekipa podświetlona</span></div>
+    <div class="section-head"><span class="section-num">07</span><h2>Podsumowanie</h2><span class="section-hint">najciekawsze liczby z wyzwania</span></div>
+    <div class="stats-grid" id="statsGrid"></div>
+  </section>
+
+  <section>
+    <div class="section-head"><span class="section-num">08</span><h2>Top 10 generalnej</h2><span class="section-hint">Twoja ekipa podświetlona</span></div>
     <div class="chart-box" style="padding:6px 12px;">
       <table>
         <thead><tr><th>#</th><th>Zawodnik</th><th style="text-align:right;">Punkty</th></tr></thead>
@@ -697,6 +714,28 @@ function renderDatalist(){
   dl.innerHTML = DATA.allNames.map(n=>`<option value="${n}">`).join('');
 }
 
+function renderStats(){
+  const grid = document.getElementById('statsGrid');
+  if (!grid || !DATA) return;
+  const top = DATA.topLeaders?.[0];
+  const active = crew.filter(n=>DATA.users[n]);
+  const totalCrewPoints = active.reduce((sum, name) => sum + (DATA.users[name]?.points || 0), 0);
+  const avgCrewPoints = active.length ? totalCrewPoints / active.length : 0;
+  const topCrew = active.length ? active.reduce((best, name) => (DATA.users[name]?.points || 0) > (DATA.users[best]?.points || 0) ? name : best, active[0]) : '—';
+  const cards = [
+    {label:'Lider wyzwania', value: top?.name || '—', sub: `${(top?.points || 0).toFixed(1)} pkt`},
+    {label:'Twoja ekipa', value: active.length ? `${active.length} osób` : '0 osób', sub: `${totalCrewPoints.toFixed(1)} pkt łącznie`},
+    {label:'Śr. punktów', value: avgCrewPoints.toFixed(1), sub: 'na osobę w ekipie'},
+    {label:'Najsilniejszy', value: topCrew, sub: `${(DATA.users[topCrew]?.points || 0).toFixed(1)} pkt`}
+  ];
+  grid.innerHTML = cards.map(card => `
+    <div class="stat-card">
+      <div class="stat-label">${card.label}</div>
+      <div class="stat-value">${card.value}</div>
+      <div class="stat-sub">${card.sub}</div>
+    </div>`).join('');
+}
+
 function renderBibs(){
   const grid = document.getElementById('bibGrid');
   grid.innerHTML = '';
@@ -773,6 +812,8 @@ function renderBarChart(){
       }]
     },
     options:{
+      responsive:true,
+      maintainAspectRatio:false,
       indexAxis:'y',
       plugins:{legend:{display:false}, tooltip:{callbacks:{label:(c)=>` ${c.raw.toFixed(1)} pkt`}}},
       scales:{
@@ -803,6 +844,8 @@ function renderLineChart(){
       }))
     },
     options:{
+      responsive:true,
+      maintainAspectRatio:false,
       plugins:{legend:{position:'bottom', labels:{color:'#eef4f8', font:{family:'Inter', size:12}, boxWidth:10, boxHeight:10}}},
       scales:{
         x:{grid:{color:'#1c3a54'}, ticks:{color:'#7f9bb4'}},
@@ -855,6 +898,7 @@ function renderTop10(){
 
 function renderAll(){
   renderChips();
+  renderStats();
   renderBibs();
   renderBarChart();
   renderLineChart();
