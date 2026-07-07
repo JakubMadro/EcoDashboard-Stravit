@@ -60,13 +60,43 @@
 
   /* ---- Crew management ---- */
   .crew-panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px;}
-  .profile-card{margin-top:16px;padding:14px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,0.03);display:grid;gap:10px;}
-  .profile-card .profile-title{font-size:13px;font-weight:600;color:var(--amber);text-transform:uppercase;letter-spacing:.08em;}
-  .profile-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;align-items:end;}
-  .profile-grid label{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--muted);}
-  .profile-grid select, .profile-grid input{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13.5px;}
+  .profile-card{position:relative;margin-top:16px;padding:16px 16px 18px;border:1px solid rgba(255,183,0,0.2);border-radius:18px;background:linear-gradient(135deg, rgba(255,183,0,0.12), rgba(46,196,182,0.08)), rgba(12,26,41,0.95);display:grid;gap:12px;box-shadow:0 18px 40px rgba(0,0,0,0.22);overflow:hidden;}
+  .profile-card::before{content:'';position:absolute;inset:0 auto 0 0;width:3px;background:linear-gradient(180deg,var(--amber),var(--teal));}
+  .profile-card .profile-top{display:flex;align-items:flex-start;gap:12px;}
+  .profile-card .profile-avatar{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--amber),#ffe082);color:#121212;font-weight:700;box-shadow:inset 0 1px 0 rgba(255,255,255,0.4);flex-shrink:0;}
+  .profile-card .profile-title{font-size:13px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.12em;}
+  .profile-card .profile-subtitle{font-size:13px;color:var(--muted);line-height:1.45;}
+  .profile-card .profile-status{display:inline-flex;align-items:center;gap:6px;width:max-content;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);font-size:12px;color:var(--text);margin-top:4px;}
+  .profile-card .profile-status::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 3px rgba(46,196,182,0.18);} 
+  .profile-top{align-items:center;display:flex;gap:12px;}
+  .profile-collapse-btn{margin-left:auto;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:999px;color:var(--text);padding:8px 12px;font-size:12px;cursor:pointer;transition:transform .15s ease, background .15s ease;}
+  .profile-collapse-btn:hover{background:rgba(255,255,255,0.1);transform:translateY(-1px);}
+  #profileCardContent{display:grid;gap:12px;}
+  .profile-card.collapsed #profileCardContent{display:none;}
+  .profile-card.collapsed .profile-collapse-btn{background:rgba(46,196,182,0.14);}
+  .profile-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end;}
+  .profiles-pill-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;}
+  .profile-pill{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);font-size:13px;color:var(--text);cursor:pointer;transition:transform .15s ease, background .15s ease;}
+  .profile-pill:hover{transform:translateY(-1px);background:rgba(255,255,255,0.08);}
+  .profile-pill.active{background:linear-gradient(135deg, rgba(255,183,0,0.22), rgba(46,196,182,0.12));border-color:rgba(255,255,255,0.14);}
+  .profile-empty{font-size:13px;color:var(--muted);padding:12px 14px;border:1px dashed rgba(255,255,255,0.12);border-radius:12px;background:rgba(255,255,255,0.03);}
+  .profile-grid label{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--muted);} 
+  .profile-grid select, .profile-grid input{background:rgba(11,24,38,0.92);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13.5px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.03);}
   .profile-grid select:focus, .profile-grid input:focus{outline:2px solid var(--amber);outline-offset:1px;}
-  .profile-grid button{border:none;border-radius:8px;padding:10px 14px;font-weight:600;font-size:13.5px;cursor:pointer;font-family:'Inter',sans-serif;}
+  .profile-grid button{border:none;border-radius:10px;padding:10px 14px;font-weight:700;font-size:13.5px;cursor:pointer;font-family:'Inter',sans-serif;transition:transform .15s ease, box-shadow .15s ease;}
+  .profile-grid button:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(0,0,0,0.2);} 
+  .profile-inline-panel{padding:10px 12px;border:1px solid rgba(255,255,255,0.06);border-radius:12px;background:rgba(255,255,255,0.03);}
+  .profile-btn-primary{background:linear-gradient(135deg,var(--amber),#ffcf4d);color:#1a1200;}
+  .profile-btn-secondary{background:var(--surface2);color:var(--text);border:1px solid rgba(255,255,255,0.08);}
+  .profile-btn-ghost{background:rgba(255,255,255,0.04);color:var(--amber);border:1px solid rgba(255,255,255,0.08);padding:10px 12px;text-align:left;border-radius:10px;}
+  .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:12px;}
+  .stat-card{background:linear-gradient(135deg, rgba(255,183,0,0.13), rgba(46,196,182,0.08));border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-height:92px;display:flex;flex-direction:column;justify-content:space-between;}
+  .stat-card .stat-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);}
+  .stat-card .stat-value{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--text);}
+  .stat-card .stat-sub{font-size:12px;color:var(--muted);}
+  .search-box{position:relative;}
+  .search-box input{width:100%;padding-right:38px;}
+  .search-box .search-icon{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none;}
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
   .chip{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--line);border-radius:100px;padding:6px 6px 6px 14px;font-size:13.5px;}
   .chip.me{border-color:var(--coral);background:rgba(239,71,111,0.12);}
@@ -106,9 +136,9 @@
   .empty{color:var(--muted);font-size:13.5px;padding:30px 10px;text-align:center;border:1px dashed var(--line);border-radius:12px;}
 
   /* ---- chart containers ---- */
-  .chart-box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px 8px;}
+  .chart-box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px 8px;width:100%;position:relative;overflow:hidden;}
   .chart-box.tall{height:340px;}
-  canvas{max-width:100%;}
+  .chart-box canvas{display:block;width:100% !important;height:100% !important;max-width:100%;}
 
   /* ---- leaderboard table ---- */
   table{width:100%;border-collapse:collapse;font-size:13.5px;}
@@ -163,34 +193,46 @@
     <div class="crew-panel">
       <div class="chips" id="chips"></div>
       <div class="add-row">
-        <input list="athleteList" id="addInput" placeholder="Wpisz imię i nazwisko zawodnika…" autocomplete="off">
-        <datalist id="athleteList"></datalist>
+        <div class="search-box" style="flex:1; min-width:220px;">
+          <input list="athleteList" id="addInput" placeholder="Szukaj zawodnika i dodaj do ekipy…" autocomplete="off">
+          <datalist id="athleteList"></datalist>
+          <span class="search-icon">⌕</span>
+        </div>
         <button class="add-btn" id="addBtn">+ Dodaj do ekipy</button>
       </div>
       <div class="add-msg" id="addMsg"></div>
-      <div class="profile-card">
-        <div class="profile-title">Profil użytkownika</div>
+      <div class="profile-card" id="profileCard">
+        <div class="profile-top">
+          <div class="profile-avatar">P</div>
+          <div>
+            <div class="profile-title">Profil użytkownika</div>
+            <div class="profile-subtitle">Wybierz osobę, którą chcesz traktować jako swój punkt odniesienia w dashboardzie.</div>
+            <div class="profile-status" id="profileStatus">Brak aktywnego profilu</div>
+          </div>
+          <button type="button" id="profileCollapseBtn" class="profile-collapse-btn">Zwiń</button>
+        </div>
+        <div id="profileCardContent">
         <div class="profile-grid">
           <label>
             <span>Wybierz zapisany profil</span>
-            <select id="profileSelect" autocomplete="off">
-              <option value="">-- nie ma jeszcze profilu --</option>
-            </select>
+            <input list="profileList" id="profileInput" placeholder="Szukaj profilu…" autocomplete="off">
+            <datalist id="profileList"></datalist>
           </label>
-          <button id="loadProfileBtn" style="background: var(--surface2); color: var(--text); border: 1px solid var(--line);">Wczytaj</button>
+          <button id="loadProfileBtn" class="profile-btn-secondary">Wczytaj</button>
         </div>
-        <div id="profileHint" class="add-msg" style="margin-top: 4px; color: var(--muted);">Nie istnieje? Kliknij poniżej, żeby utworzyć profil.</div>
-        <div id="createProfileBlock" class="profile-grid" style="margin-top: 8px; display: none;">
-          <label>
-            <span>Wybierz osobę jako swój profil (JA)</span>
-            <select id="meInput" autocomplete="off">
-              <option value="">-- wybierz osobę --</option>
-            </select>
-          </label>
-          <button id="createProfileBtn" style="background: var(--amber); color: #1a1200;">Utwórz profil</button>
+        <div id="profileHint" class="add-msg" style="margin-top: 2px; color: var(--muted);">Nie istnieje? Kliknij poniżej, żeby utworzyć nowy profil.</div>
+        <div id="createProfileBlock" class="profile-inline-panel" style="display: none;">
+          <div class="profile-grid">
+            <label>
+              <span>Wybierz osobę jako swój profil (JA)</span>
+              <input list="athleteList" id="meInput" placeholder="Szukaj zawodnika…" autocomplete="off">
+            </label>
+            <button id="createProfileBtn" class="profile-btn-primary">Utwórz</button>
+          </div>
         </div>
-        <button id="toggleCreateProfileBtn" style="margin-top: 6px; background: transparent; color: var(--amber); border: 1px dashed var(--line); padding: 10px 12px; text-align: left;">+ Utwórz nowy profil</button>
-        <div id="profileMsg" class="add-msg" style="margin-top: 4px;"></div>
+        <button id="toggleCreateProfileBtn" class="profile-btn-ghost">+ Utwórz nowy profil</button>
+        <div id="profileMsg" class="add-msg" style="margin-top: 2px;"></div>
+        <div id="profileListWrap" class="profiles-pill-grid"></div>
       </div>
     </div>
   </section>
@@ -201,22 +243,27 @@
   </section>
 
   <section>
-    <div class="section-head"><span class="section-num">03</span><h2>Punkty — porównanie ekipy</h2></div>
+    <div class="section-head"><span class="section-num">04</span><h2>Punkty — porównanie ekipy</h2></div>
     <div class="chart-box tall"><canvas id="barChart"></canvas></div>
   </section>
 
   <section>
-    <div class="section-head"><span class="section-num">04</span><h2>Dzienna forma</h2><span class="section-hint">punkty zdobyte każdego dnia wyzwania</span></div>
+    <div class="section-head"><span class="section-num">05</span><h2>Dzienna forma</h2><span class="section-hint">punkty zdobyte każdego dnia wyzwania</span></div>
     <div class="chart-box tall"><canvas id="lineChart"></canvas></div>
   </section>
 
   <section>
-    <div class="section-head"><span class="section-num">05</span><h2>Z czego te punkty</h2><span class="section-hint">rozkład punktów według typu treningu</span></div>
+    <div class="section-head"><span class="section-num">06</span><h2>Z czego te punkty</h2><span class="section-hint">rozkład punktów według typu treningu</span></div>
     <div class="chart-box" style="height:auto;padding-bottom:18px;"><canvas id="stackChart"></canvas></div>
   </section>
 
   <section>
-    <div class="section-head"><span class="section-num">06</span><h2>Top 10 generalnej</h2><span class="section-hint">Twoja ekipa podświetlona</span></div>
+    <div class="section-head"><span class="section-num">07</span><h2>Podsumowanie</h2><span class="section-hint">najciekawsze liczby z wyzwania</span></div>
+    <div class="stats-grid" id="statsGrid"></div>
+  </section>
+
+  <section>
+    <div class="section-head"><span class="section-num">08</span><h2>Top 10 generalnej</h2><span class="section-hint">Twoja ekipa podświetlona</span></div>
     <div class="chart-box" style="padding:6px 12px;">
       <table>
         <thead><tr><th>#</th><th>Zawodnik</th><th style="text-align:right;">Punkty</th></tr></thead>
@@ -509,9 +556,24 @@ const TYPE_COLORS = {Run:'#ef476f', Walk:'#ffb700', Ride:'#2ec4b6', VirtualRide:
 
 let crew = [];
 let charts = {};
+let profileCollapsed = localStorage.getItem('dashboard-profile-collapsed') === 'true';
 
 function getCrewStorageKey(){
   return profileId ? `tracked-athletes-${profileId}` : 'tracked-athletes';
+}
+
+function updateProfileCardState(){
+  const card = document.getElementById('profileCard');
+  const button = document.getElementById('profileCollapseBtn');
+  if (!card || !button) return;
+  card.classList.toggle('collapsed', profileCollapsed);
+  button.textContent = profileCollapsed ? 'Rozwiń' : 'Zwiń';
+}
+
+function toggleProfileCard(){
+  profileCollapsed = !profileCollapsed;
+  localStorage.setItem('dashboard-profile-collapsed', profileCollapsed ? 'true' : 'false');
+  updateProfileCardState();
 }
 
 function resolveName(value){
@@ -524,23 +586,24 @@ function resolveName(value){
 }
 
 function renderProfileControls(){
-  const select = document.getElementById('profileSelect');
+  const profileInput = document.getElementById('profileInput');
+  const profileList = document.getElementById('profileList');
   const meInput = document.getElementById('meInput');
   const createBlock = document.getElementById('createProfileBlock');
   const toggleBtn = document.getElementById('toggleCreateProfileBtn');
   const hint = document.getElementById('profileHint');
-  if (select) {
-    select.innerHTML = '<option value="">-- nie ma jeszcze profilu --</option>' +
-      savedProfiles.map(p => `<option value="${p.id}">${(p.me || 'Osoba').replace(/</g,'&lt;')}</option>`).join('');
-    if (profileId) {
-      select.value = profileId;
-    }
+  const status = document.getElementById('profileStatus');
+  if (profileList) {
+    profileList.innerHTML = savedProfiles.map(p => `<option value="${(p.me || 'Osoba').replace(/</g,'&lt;')}"></option>`).join('');
+  }
+  if (profileInput) {
+    profileInput.value = profileId && ME_NAME ? ME_NAME : '';
   }
   if (meInput && DATA?.allNames) {
-    meInput.innerHTML = '<option value="">-- wybierz osobę --</option>' +
-      DATA.allNames.map(n => `<option value="${n}">${n}</option>`).join('');
     if (ME_NAME) {
       meInput.value = ME_NAME;
+    } else {
+      meInput.value = '';
     }
   }
   if (createBlock) {
@@ -554,6 +617,31 @@ function renderProfileControls(){
     hint.textContent = profileId && ME_NAME
       ? `Aktywny profil: ${ME_NAME}`
       : 'Nie istnieje? Kliknij poniżej, żeby utworzyć profil.';
+  }
+  if (status) {
+    status.textContent = profileId && ME_NAME ? `Aktywny profil • ${ME_NAME}` : 'Brak aktywnego profilu';
+  }
+  updateProfileCardState();
+  const listWrap = document.getElementById('profileListWrap');
+  if (listWrap) {
+    if (!savedProfiles.length) {
+      listWrap.innerHTML = '<div class="profile-empty">Brak zapisanych profili. Utwórz pierwszy profil, aby dodać go do ekipy i zapisać ustawienia.</div>';
+    } else {
+      listWrap.innerHTML = savedProfiles.map(p => {
+        const active = p.id === profileId;
+        return `<button type="button" class="profile-pill${active?' active':''}" data-id="${p.id}">${(p.me || 'Osoba').replace(/</g,'&lt;')}</button>`;
+      }).join('');
+      Array.from(listWrap.querySelectorAll('.profile-pill')).forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-id');
+          const profile = savedProfiles.find(p => p.id === id);
+          if (profile) {
+            document.getElementById('profileInput').value = profile.me || '';
+            document.getElementById('loadProfileBtn').click();
+          }
+        });
+      });
+    }
   }
 }
 
@@ -591,26 +679,34 @@ async function createProfile(){
   const meValue = (meInput?.value || '').trim();
   if (!meValue) {
     if (profileMsg) {
-      profileMsg.textContent = 'Wybierz osobę z listy.';
+      profileMsg.textContent = 'Wpisz nazwę zawodnika, który ma być Twoim profilem.';
+      profileMsg.className = 'add-msg err';
+    }
+    return;
+  }
+
+  const resolvedMe = resolveName(meValue) || meValue;
+  if (!resolvedMe) {
+    if (profileMsg) {
+      profileMsg.textContent = 'Nie znalazłem takiej osoby w danych wyzwania.';
       profileMsg.className = 'add-msg err';
     }
     return;
   }
 
   await loadSavedProfiles();
-  const duplicate = savedProfiles.find(p => (p.me || '').trim().toLowerCase() === meValue.trim().toLowerCase());
+  const duplicate = savedProfiles.find(p => (p.me || '').trim().toLowerCase() === resolvedMe.trim().toLowerCase());
   if (duplicate && duplicate.id !== profileId) {
     if (profileMsg) {
-      profileMsg.textContent = `Profil dla ${meValue} już istnieje.`;
+      profileMsg.textContent = `Profil dla ${resolvedMe} już istnieje.`;
       profileMsg.className = 'add-msg err';
     }
     return;
   }
 
-  const resolvedMe = meValue;
   profileId = `profile_${Date.now().toString(36)}`;
   ME_NAME = resolvedMe;
-  crew = [];
+  crew = DATA.users?.[ME_NAME] ? [ME_NAME] : [];
   await saveCrew();
   await loadSavedProfiles();
   renderProfileControls();
@@ -697,6 +793,28 @@ function renderDatalist(){
   dl.innerHTML = DATA.allNames.map(n=>`<option value="${n}">`).join('');
 }
 
+function renderStats(){
+  const grid = document.getElementById('statsGrid');
+  if (!grid || !DATA) return;
+  const top = DATA.topLeaders?.[0];
+  const active = crew.filter(n=>DATA.users[n]);
+  const totalCrewPoints = active.reduce((sum, name) => sum + (DATA.users[name]?.points || 0), 0);
+  const avgCrewPoints = active.length ? totalCrewPoints / active.length : 0;
+  const topCrew = active.length ? active.reduce((best, name) => (DATA.users[name]?.points || 0) > (DATA.users[best]?.points || 0) ? name : best, active[0]) : '—';
+  const cards = [
+    {label:'Lider wyzwania', value: top?.name || '—', sub: `${(top?.points || 0).toFixed(1)} pkt`},
+    {label:'Twoja ekipa', value: active.length ? `${active.length} osób` : '0 osób', sub: `${totalCrewPoints.toFixed(1)} pkt łącznie`},
+    {label:'Śr. punktów', value: avgCrewPoints.toFixed(1), sub: 'na osobę w ekipie'},
+    {label:'Najsilniejszy', value: topCrew, sub: `${(DATA.users[topCrew]?.points || 0).toFixed(1)} pkt`}
+  ];
+  grid.innerHTML = cards.map(card => `
+    <div class="stat-card">
+      <div class="stat-label">${card.label}</div>
+      <div class="stat-value">${card.value}</div>
+      <div class="stat-sub">${card.sub}</div>
+    </div>`).join('');
+}
+
 function renderBibs(){
   const grid = document.getElementById('bibGrid');
   grid.innerHTML = '';
@@ -773,6 +891,8 @@ function renderBarChart(){
       }]
     },
     options:{
+      responsive:true,
+      maintainAspectRatio:false,
       indexAxis:'y',
       plugins:{legend:{display:false}, tooltip:{callbacks:{label:(c)=>` ${c.raw.toFixed(1)} pkt`}}},
       scales:{
@@ -803,6 +923,8 @@ function renderLineChart(){
       }))
     },
     options:{
+      responsive:true,
+      maintainAspectRatio:false,
       plugins:{legend:{position:'bottom', labels:{color:'#eef4f8', font:{family:'Inter', size:12}, boxWidth:10, boxHeight:10}}},
       scales:{
         x:{grid:{color:'#1c3a54'}, ticks:{color:'#7f9bb4'}},
@@ -855,6 +977,7 @@ function renderTop10(){
 
 function renderAll(){
   renderChips();
+  renderStats();
   renderBibs();
   renderBarChart();
   renderLineChart();
@@ -866,6 +989,7 @@ document.getElementById('addBtn').onclick = addAthlete;
 document.getElementById('addInput').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addAthlete(); }});
 document.getElementById('authPanel').addEventListener('submit', loginToStravit);
 document.getElementById('createProfileBtn').onclick = createProfile;
+document.getElementById('profileCollapseBtn')?.addEventListener('click', toggleProfileCard);
 document.getElementById('toggleCreateProfileBtn').onclick = ()=>{
   const createBlock = document.getElementById('createProfileBlock');
   if (!createBlock) return;
@@ -877,14 +1001,14 @@ document.getElementById('toggleCreateProfileBtn').onclick = ()=>{
   }
 };
 document.getElementById('loadProfileBtn').onclick = async ()=>{
-  const select = document.getElementById('profileSelect');
-  const id = select?.value;
-  if (!id) return;
-  const profile = savedProfiles.find(p => p.id === id);
+  const input = document.getElementById('profileInput');
+  const value = (input?.value || '').trim();
+  if (!value) return;
+  const profile = savedProfiles.find(p => (p.me || '').trim().toLowerCase() === value.trim().toLowerCase());
   if (profile) {
-    applyProfile({ id: profile.id, name: profile.name, me: profile.me, members: [] });
+    applyProfile({ id: profile.id, me: profile.me, members: [] });
     try {
-      const resp = await fetch(`/api/crew?id=${encodeURIComponent(id)}`);
+      const resp = await fetch(`/api/crew?id=${encodeURIComponent(profile.id)}`);
       if (resp.ok) {
         const payload = await resp.json();
         if (payload && typeof payload === 'object') {
@@ -892,19 +1016,20 @@ document.getElementById('loadProfileBtn').onclick = async ()=>{
         }
       }
     } catch (e) {}
+  } else {
+    const profileMsg = document.getElementById('profileMsg');
+    if (profileMsg) {
+      profileMsg.textContent = `Nie znaleziono profilu dla "${value}".`;
+      profileMsg.className = 'add-msg err';
+    }
   }
 };
-document.getElementById('profileSelect').onchange = ()=>{
-  const select = document.getElementById('profileSelect');
-  if (!select?.value) {
-    profileId = '';
-    ME_NAME = '';
-    localStorage.removeItem('dashboard-profile-id');
-    localStorage.removeItem('dashboard-me');
-    crew = [];
-    renderAll();
+document.getElementById('profileInput')?.addEventListener('keydown', e=>{
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    document.getElementById('loadProfileBtn').click();
   }
-};
+});
 
 function addAthlete(){
   const input = document.getElementById('addInput');
