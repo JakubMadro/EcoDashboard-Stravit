@@ -155,7 +155,7 @@ async function fetchApiData(force = false) {
     err.authRequired = Boolean(payload?.authRequired || resp.status === 401);
     throw err;
   }
-  if (!payload.users || !payload.allNames || !payload.dateRange) {
+  if (!payload.users || !payload.dateRange) {
     throw new Error('API zwrocilo niepelny zestaw danych.');
   }
   return payload;
