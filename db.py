@@ -2,7 +2,10 @@ import json
 import os
 import time
 import hashlib
+import logging
 from pathlib import Path
+
+logger = logging.getLogger("eco-dashboard.db")
 
 BASE_DIR = Path(__file__).resolve().parent
 AZURE_STORAGE_CONN_STR = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
@@ -43,9 +46,10 @@ def _get_table_client(table_name):
     return client
 
 
-def make_activity_id(athlete, date_str, title, distance, time_sec):
-    key_string = f"{athlete}|{date_str}|{title}|{distance}|{time_sec}"
-    return hashlib.sha256(key_string.encode('utf-8')).hexdigest()
+def make_activity_id(athlete, date_raw, title, distance, time_sec):
+    # Ensure stable RowKey by using SHA-256 of unique fields including full date_raw with time
+    raw = f"{athlete}|{date_raw}|{title}|{distance}|{time_sec}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
 # =====================================================================
@@ -208,33 +212,48 @@ def list_crew_profiles():
 
 def save_activities_batch(slug, activities_list):
     table_client = _get_table_client("activities")
+    
+    # De-duplicate by RowKey to prevent Azure Table transaction errors (same RowKey cannot be in a batch)
+    seen_keys = set()
+    unique_activities = []
+    for act in activities_list:
+        row_key = make_activity_id(
+            act["name"], act.get("dateRaw", act["dateStr"]), act["title"], act["dist"], act["timeSec"]
+        )
+        if row_key not in seen_keys:
+            seen_keys.add(row_key)
+            unique_activities.append(act)
+
     if table_client:
-        try:
-            # Azure Table transaction allows up to 100 operations in a single batch.
-            for i in range(0, len(activities_list), 100):
-                chunk = activities_list[i:i + 100]
-                operations = []
-                for act in chunk:
-                    row_key = make_activity_id(
-                        act["name"], act["dateStr"], act["title"], act["dist"], act["timeSec"]
-                    )
-                    entity = {
-                        "PartitionKey": slug,
-                        "RowKey": row_key,
-                        "name": act["name"],
-                        "title": act["title"],
-                        "dist": float(act["dist"]),
-                        "pts": float(act["pts"]),
-                        "elev": float(act["elev"]),
-                        "timeSec": int(act["timeSec"]),
-                        "type": act["type"],
-                        "dateStr": act["dateStr"],
-                    }
-                    operations.append(("upsert", entity))
+        logger.info(f"DB: Zapisywanie {len(unique_activities)} unikalnych aktywności do Azure Table Storage w paczkach po 100...")
+        saved_count = 0
+        for i in range(0, len(unique_activities), 100):
+            chunk = unique_activities[i:i + 100]
+            operations = []
+            for act in chunk:
+                row_key = make_activity_id(
+                    act["name"], act.get("dateRaw", act["dateStr"]), act["title"], act["dist"], act["timeSec"]
+                )
+                entity = {
+                    "PartitionKey": slug,
+                    "RowKey": row_key,
+                    "name": act["name"],
+                    "title": act["title"],
+                    "dist": float(act["dist"]),
+                    "pts": float(act["pts"]),
+                    "elev": float(act["elev"]),
+                    "timeSec": int(act["timeSec"]),
+                    "type": act["type"],
+                    "dateStr": act["dateStr"],
+                    "dateRaw": act.get("dateRaw", act["dateStr"]),
+                }
+                operations.append(("upsert", entity))
+            try:
                 table_client.submit_transaction(operations)
-            print(f"Saved {len(activities_list)} activities to Azure Table Storage in batches.", flush=True)
-        except Exception as e:
-            print(f"Error saving activities batch to Azure Table: {e}", flush=True)
+                saved_count += len(chunk)
+            except Exception as e:
+                logger.error(f"DB: Błąd zapisu paczki {i}-{i+len(chunk)} do Azure Table: {e}")
+        logger.info(f"DB: Zapisano pomyślnie {saved_count} z {len(unique_activities)} unikalnych aktywności w Azure Table Storage.")
 
     # Backup locally (Merge new activities with existing ones)
     try:
@@ -251,10 +270,10 @@ def save_activities_batch(slug, activities_list):
         # Merge based on hash to avoid duplicates
         merged = {}
         for act in existing:
-            h = make_activity_id(act["name"], act["dateStr"], act["title"], act["dist"], act["timeSec"])
+            h = make_activity_id(act["name"], act.get("dateRaw", act["dateStr"]), act["title"], act["dist"], act["timeSec"])
             merged[h] = act
-        for act in activities_list:
-            h = make_activity_id(act["name"], act["dateStr"], act["title"], act["dist"], act["timeSec"])
+        for act in unique_activities:
+            h = make_activity_id(act["name"], act.get("dateRaw", act["dateStr"]), act["title"], act["dist"], act["timeSec"])
             merged[h] = act
 
         local_file.parent.mkdir(parents=True, exist_ok=True)
@@ -284,6 +303,7 @@ def load_activities(slug):
                     "timeSec": int(ent.get("timeSec") or 0),
                     "type": ent.get("type"),
                     "dateStr": ent.get("dateStr"),
+                    "dateRaw": ent.get("dateRaw", ent.get("dateStr")),
                 })
             return activities
         except Exception as e:
@@ -315,7 +335,7 @@ def has_activity(slug, activity_id):
             if slug not in _local_activity_hashes_cache:
                 hashes = set()
                 for act in local_data:
-                    h = make_activity_id(act["name"], act["dateStr"], act["title"], act["dist"], act["timeSec"])
+                    h = make_activity_id(act["name"], act.get("dateRaw", act["dateStr"]), act["title"], act["dist"], act["timeSec"])
                     hashes.add(h)
                 _local_activity_hashes_cache[slug] = hashes
             return activity_id in _local_activity_hashes_cache[slug]

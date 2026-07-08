@@ -182,6 +182,7 @@ def parse_csv_activities(source):
             "timeSec": parse_time_to_seconds(row.get("czas") or ""),
             "type": (row.get("typ treningu") or "").strip(),
             "dateStr": date_raw[:10],
+            "dateRaw": date_raw,
         })
     return activities
 
@@ -223,7 +224,7 @@ def sync_activities(slug, full_import=False):
     new_activities = []
     logger.info(f"Sync: Uruchomiono szybką synchronizację przyrostową (Fast Sync) dla wyzwania: {slug}")
     for act in activities:
-        act_id = make_activity_id(act["name"], act["dateStr"], act["title"], act["dist"], act["timeSec"])
+        act_id = make_activity_id(act["name"], act.get("dateRaw", act["dateStr"]), act["title"], act["dist"], act["timeSec"])
         if has_activity(slug, act_id):
             break
         new_activities.append(act)
