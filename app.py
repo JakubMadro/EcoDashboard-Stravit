@@ -134,7 +134,7 @@ def build_data_from_activities(activities, crew_filter=None):
         "fetchedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "dateRange": [all_dates[0], all_dates[-1]],
         "allDates": all_dates,
-        "totalUsers": len(users),
+        "totalUsers": len(all_users),
         "totals": totals,
         "topLeaders": top,
         "users": users,

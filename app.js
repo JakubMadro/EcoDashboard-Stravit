@@ -299,7 +299,7 @@ function updateHeader() {
 
   const footer = document.getElementById('dashboardFooter');
   if (footer && DATA.dateRange) {
-    footer.textContent = `DANE: EKSPORT WYZWANIA · ${fmtDateShort(DATA.dateRange[0]).toUpperCase()} – ${fmtDateShort(DATA.dateRange[1]).toUpperCase()} · ${DATA.totalUsers} UCZESTNIKÓW`;
+    footer.textContent = `EKSPORT WYZWANIA · ${fmtDateShort(DATA.dateRange[0]).toUpperCase()} – ${fmtDateShort(DATA.dateRange[1]).toUpperCase()} · ${DATA.totalUsers} UCZESTNIKÓW · AUTOR: JAKUB MĄDRO`;
   }
 }
 
