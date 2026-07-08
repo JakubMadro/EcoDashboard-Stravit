@@ -5,7 +5,12 @@ import time
 import mimetypes
 import re
 import threading
+import logging
 from pathlib import Path
+
+# Configure structured logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+logger = logging.getLogger("eco-dashboard.app")
 
 # Configure App Insights telemetry globally if connection string is provided
 APPINSIGHTS_CONN_STR = os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING")
@@ -13,9 +18,9 @@ if APPINSIGHTS_CONN_STR:
     try:
         from azure.monitor.opentelemetry import configure_azure_monitor
         configure_azure_monitor(connection_string=APPINSIGHTS_CONN_STR)
-        print("Application Insights telemetry configured successfully in app.py.", flush=True)
+        logger.info("Application Insights telemetry configured successfully in app.py.")
     except Exception as e:
-        print(f"Warning: Failed to configure App Insights in app.py: {e}", flush=True)
+        logger.warning(f"Failed to configure App Insights in app.py: {e}")
 
 from db import save_crew_data, load_crew_data, list_crew_profiles, load_activities
 from sync import is_logged_in, login_to_stravit, sync_activities, start_background_sync, AuthRequired, STRAVIT_EMAIL, STRAVIT_PASSWORD, DEFAULT_SLUG
@@ -149,17 +154,17 @@ def load_challenge_data(slug, force=False, full_import=False):
         with _sync_lock:
             # Enforce rate limit (skip Stravit API hit if within limit)
             if now - _last_sync_time < SYNC_RATE_LIMIT_SECONDS:
-                print(f"Sync rate limit active. Bypassing Stravit API hit. Elapsed: {now - _last_sync_time:.0f}s", flush=True)
+                logger.info(f"Sync rate limit active. Bypassing Stravit API hit. Elapsed: {now - _last_sync_time:.0f}s")
             else:
                 try:
-                    print(f"Sync triggered. Full import: {full_import}.", flush=True)
+                    logger.info(f"Manual Sync triggered. Full import: {full_import}.")
                     sync_activities(slug, full_import=full_import)
                     _last_sync_time = now
                     # Clear cache to force database rebuild
                     with _cache_lock:
                         _cache.pop(slug, None)
                 except Exception as e:
-                    print(f"Error during manual sync trigger: {e}", flush=True)
+                    logger.error(f"Error during manual sync trigger: {e}")
                     raise
 
     # Rebuild from Table Storage
@@ -322,8 +327,8 @@ if APPINSIGHTS_CONN_STR:
     try:
         from opentelemetry.instrumentation.wsgi import OpenTelemetryMiddleware
         app = OpenTelemetryMiddleware(app)
-        print("WSGI application wrapped with OpenTelemetry middleware in app.py.", flush=True)
+        logger.info("WSGI application wrapped with OpenTelemetry middleware in app.py.")
     except Exception as e:
-        print(f"Warning: Failed to wrap WSGI app with OpenTelemetry: {e}", flush=True)
+        logger.warning(f"Failed to wrap WSGI app with OpenTelemetry: {e}")
 
 application = app

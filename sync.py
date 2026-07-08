@@ -9,7 +9,12 @@ import urllib.parse
 import http.cookiejar
 import html
 import threading
+import logging
 from db import make_activity_id, save_activities_batch, has_activity, load_activities
+
+# Initialize structured logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+logger = logging.getLogger("eco-dashboard.sync")
 
 BASE_URL = "https://mtupolska.stravit.app"
 DEFAULT_SLUG = "rywalizacja-sportowa"
@@ -184,12 +189,12 @@ def parse_csv_activities(source):
 def auto_login_if_configured():
     if STRAVIT_EMAIL and STRAVIT_PASSWORD:
         if not is_logged_in():
-            print("Auto-logging in to Stravit...", flush=True)
+            logger.info("Rozpoczynanie automatycznego logowania do Stravit (Master)...")
             try:
                 login_to_stravit(STRAVIT_EMAIL, STRAVIT_PASSWORD)
-                print("Auto-login successful!", flush=True)
+                logger.info("Automatyczne logowanie do Stravit zakończone sukcesem!")
             except Exception as e:
-                print(f"Auto-login failed: {e}", flush=True)
+                logger.error(f"Automatyczne logowanie do Stravit nie powiodło się: {e}")
 
 
 def sync_activities(slug, full_import=False):
@@ -210,24 +215,28 @@ def sync_activities(slug, full_import=False):
     activities = parse_csv_activities(csv_text)
     
     if full_import:
-        print(f"Sync: Performing full import of {len(activities)} activities...", flush=True)
+        logger.info(f"Sync: Uruchomiono pełny import (Full Import) dla wyzwania: {slug}. Liczba treningów: {len(activities)}")
         save_activities_batch(slug, activities)
         return len(activities)
     
     # Fast Incremental Sync (Stop on exist)
     new_activities = []
-    print("Sync: Performing fast incremental sync...", flush=True)
+    logger.info(f"Sync: Uruchomiono szybką synchronizację przyrostową (Fast Sync) dla wyzwania: {slug}")
     for act in activities:
         act_id = make_activity_id(act["name"], act["dateStr"], act["title"], act["dist"], act["timeSec"])
         if has_activity(slug, act_id):
-            # Already exists in DB - stop parsing older ones!
             break
         new_activities.append(act)
         
     if new_activities:
-        print(f"Sync: Found {len(new_activities)} new activities. Saving to DB...", flush=True)
-        # Reverse to save oldest to newest (or batch handles it)
-        save_activities_batch(slug, list(reversed(new_activities)))
+        logger.info(f"Sync: Znaleziono {len(new_activities)} nowych treningów do zaimportowania.")
+        # Reverse to save oldest to newest
+        reversed_new = list(reversed(new_activities))
+        for act in reversed_new:
+            logger.info(f"  -> IMPORT: {act['name']} - \"{act['title']}\" ({act['dist']} km, {act['pts']} pkt, {act['type']}, {act['dateStr']})")
+        save_activities_batch(slug, reversed_new)
+    else:
+        logger.info("Sync: Baza danych jest aktualna. Brak nowych treningów do zaimportowania.")
         
     return len(new_activities)
 
@@ -235,29 +244,29 @@ def sync_activities(slug, full_import=False):
 def background_worker(slug):
     # Auto cold-start helper
     try:
-        print(f"Background worker cold-start verification for {slug}...", flush=True)
+        logger.info(f"Wątek tła (Sync Daemon): Sprawdzanie stanu bazy dla {slug}...")
         existing = load_activities(slug)
         if not existing:
-            print(f"Database table is empty for {slug}. Starting initial full import...", flush=True)
+            logger.info(f"Baza aktywności dla {slug} jest pusta. Inicjowanie pełnego importu początkowego...")
             sync_activities(slug, full_import=True)
         else:
-            print(f"Database contains {len(existing)} activities. Performing quick startup sync...", flush=True)
+            logger.info(f"Baza danych zawiera {len(existing)} aktywności. Uruchamianie szybkiej synchronizacji startowej...")
             sync_activities(slug, full_import=False)
     except Exception as e:
-        print(f"Background worker cold-start sync failed: {e}", flush=True)
+        logger.error(f"Błąd podczas synchronizacji początkowej wątku tła: {e}")
 
     while True:
         # Sleep first to avoid running immediately after cold start
         time.sleep(900)
         try:
-            print(f"Background worker: Starting sync for {slug}...", flush=True)
+            logger.info(f"Wątek tła (Sync Daemon): Rozpoczynanie cyklicznej synchronizacji dla {slug}...")
             new_count = sync_activities(slug, full_import=False)
-            print(f"Background worker: Sync completed. Added {new_count} activities.", flush=True)
+            logger.info(f"Wątek tła (Sync Daemon): Synchronizacja zakończona. Dodano {new_count} nowych treningów.")
         except Exception as e:
-            print(f"Background worker error during sync: {e}", flush=True)
+            logger.error(f"Wątek tła (Sync Daemon): Błąd podczas synchronizacji cyklicznej: {e}")
 
 
 def start_background_sync(slug):
     t = threading.Thread(target=background_worker, args=(slug,), daemon=True)
     t.start()
-    print(f"Background sync thread started for slug: {slug}", flush=True)
+    logger.info(f"Uruchomiono wątek tła synchronizacji dla wyzwania: {slug}")
