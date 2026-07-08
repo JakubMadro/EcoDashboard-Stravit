@@ -517,73 +517,15 @@
     background: linear-gradient(180deg, var(--amber), var(--teal));
     border-radius: 0 4px 4px 0;
   }
-  .profile-top {
+  .profile-input-group,
+  .profile-create-group {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 12px;
-    padding-left: 6px;
-  }
-  .profile-avatar {
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    background: linear-gradient(135deg, var(--amber), #fcd34d);
-    color: #0f172a;
-    font-weight: 700;
-    font-size: 14px;
-    box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2);
-  }
-  .profile-info {
-    display: flex;
-    flex-direction: column;
-  }
-  .profile-title {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--amber);
-    text-transform: uppercase;
-    letter-spacing: .08em;
-  }
-  .profile-status {
-    font-size: 13px;
-    color: var(--text);
-    font-weight: 500;
-    margin-top: 2px;
-  }
-  .profile-collapse-btn {
-    margin-left: auto;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--border-color);
-    border-radius: 20px;
-    color: var(--text);
-    padding: 6px 12px;
-    font-size: 11px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-  .profile-collapse-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-  }
-
-  .profile-grid {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 8px;
-    align-items: flex-end;
-    margin-top: 6px;
-  }
-  .input-label {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    font-size: 11px;
-    color: var(--muted);
     width: 100%;
   }
-  .profile-grid input {
+  .profile-input-group input,
+  .profile-create-group input {
     width: 100%;
     height: 38px;
     background: rgba(0, 0, 0, 0.2);
@@ -594,16 +536,37 @@
     font-family: 'Inter', sans-serif;
     font-size: 13px;
   }
-  .profile-hint {
+  .profile-input-group input:focus,
+  .profile-create-group input:focus {
+    outline: none;
+    border-color: var(--teal);
+    box-shadow: 0 0 10px rgba(6, 182, 212, 0.15);
+  }
+  .profile-input-group button,
+  .profile-create-group button {
+    width: 100%;
+    height: 38px;
+  }
+  .input-label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
     font-size: 11px;
     color: var(--muted);
-    margin-top: -2px;
+    width: 100%;
   }
-  .create-profile-block {
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.03);
-    border-radius: 10px;
-    padding: 10px;
+  .profile-divider {
+    margin: 20px 0 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 16px;
+    text-align: center;
+  }
+  .profile-divider span {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
   .profiles-pill-grid {
     display: flex;
