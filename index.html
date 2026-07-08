@@ -13,6 +13,8 @@
 <div class="wrap">
   <div class="track-lines-neon"></div>
   
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
   <header class="dashboard-header glass-card">
     <div class="title-block">
       <div class="eyebrow">Eco Challenge  Tablica wyników</div>
@@ -27,6 +29,9 @@
         <div class="ticker-item"><div class="ticker-val" id="tv3">…</div><div class="ticker-label">w ruchu</div></div>
       </div>
       <div class="header-actions">
+        <button id="toggleSidebarBtnMobile" class="sidebar-burger-btn-mobile" title="Zarządzaj ekipą i profilami">
+          👥 Ekipa i Profile
+        </button>
         <span id="refreshStatus" class="status-time"></span>
         <button id="refreshBtn" class="btn btn-teal">
           ↻ Odśwież dane
@@ -42,13 +47,14 @@
   </header>
 
   <div class="dashboard-grid-layout" id="dashboardGridLayout">
-    <!-- Sidebar Controls -->
     <aside class="dashboard-sidebar" id="dashboardSidebar">
-      <div class="sidebar-toggle-row">
-        <button id="toggleSidebarBtn" class="sidebar-burger-btn" title="Zwiń/Rozwiń panel">
-          ☰
-        </button>
-        <span class="sidebar-toggle-label">Filtry i ekipa</span>
+      <div class="sidebar-mobile-header" id="sidebarMobileHeader">
+        <span>Zarządzanie</span>
+        <button id="closeSidebarBtn" class="sidebar-close-btn" aria-label="Zamknij panel">&times;</button>
+      </div>
+      <div class="sidebar-desktop-header" id="sidebarDesktopHeader">
+        <span class="sidebar-title-text">Filtry i ekipa</span>
+        <button id="toggleSidebarBtnDesktop" class="sidebar-collapse-btn-desktop" title="Zwiń panel">◀</button>
       </div>
       <section class="sidebar-section glass-card">
         <div class="section-head">
@@ -129,8 +135,15 @@
           <h2>Analiza i wykresy</h2>
           <span class="section-hint">dane szczegółowe ekipy</span>
         </div>
+        <div class="chart-tabs-container" id="chartTabsContainer">
+          <button class="chart-tab active" data-chart="cumulative">📈 Skumulowany</button>
+          <button class="chart-tab" data-chart="bar">📊 Porównanie</button>
+          <button class="chart-tab" data-chart="line">Forma</button>
+          <button class="chart-tab" data-chart="stack">Kategorie</button>
+        </div>
+
         <div class="charts-grid">
-          <div class="chart-container">
+          <div class="chart-container chart-card-wrapper active" data-chart="cumulative">
             <div class="chart-header">
               <h3>Postęp skumulowany</h3>
               <span class="chart-subtitle">Łączna suma punktów w kolejnych dniach</span>
@@ -139,7 +152,7 @@
             <div class="chart-box tall"><canvas id="cumulativeChart"></canvas></div>
           </div>
           
-          <div class="chart-container">
+          <div class="chart-container chart-card-wrapper" data-chart="bar">
             <div class="chart-header">
               <h3>Punkty — porównanie</h3>
               <span class="chart-subtitle">Łączne punkty członków ekipy</span>
@@ -148,7 +161,7 @@
             <div class="chart-box tall"><canvas id="barChart"></canvas></div>
           </div>
 
-          <div class="chart-container">
+          <div class="chart-container chart-card-wrapper" data-chart="line">
             <div class="chart-header">
               <h3>Dzienna forma</h3>
               <span class="chart-subtitle">Punkty zdobyte każdego dnia wyzwania</span>
@@ -157,7 +170,7 @@
             <div class="chart-box tall"><canvas id="lineChart"></canvas></div>
           </div>
 
-          <div class="chart-container">
+          <div class="chart-container chart-card-wrapper" data-chart="stack">
             <div class="chart-header">
               <h3>Z czego te punkty</h3>
               <span class="chart-subtitle">Rozkład punktów według typu treningu</span>

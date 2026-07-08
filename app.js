@@ -383,22 +383,27 @@ function renderProfileControls(){
   updateProfileCardState();
   const listWrap = document.getElementById('profileListWrap');
   if (listWrap) {
-    if (!savedProfiles.length) {
-      listWrap.innerHTML = '<div class="profile-empty">Brak zapisanych profili. Utwórz pierwszy profil, aby dodać go do ekipy i zapisać ustawienia.</div>';
+    const recents = JSON.parse(localStorage.getItem('dashboard-recent-profile-ids') || '[]');
+    const visibleProfiles = savedProfiles.filter(p => recents.includes(p.id) || p.id === profileId);
+
+    if (!visibleProfiles.length) {
+      listWrap.innerHTML = '<div class="profile-empty">Wyszukaj lub stwórz profil powyżej, aby zapisać go na tym urządzeniu.</div>';
     } else {
-      listWrap.innerHTML = savedProfiles.map(p => {
-        const active = p.id === profileId;
-        return `<button type="button" class="profile-pill${active?' active':''}" data-id="${p.id}">${(p.me || 'Osoba').replace(/</g,'&lt;')}</button>`;
-      }).join('');
+      listWrap.innerHTML = '<div style="font-size: 11px; color: var(--muted); margin-bottom: 6px; width: 100%; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase;">Ostatnio używane:</div>' + 
+        visibleProfiles.map(p => {
+          const active = p.id === profileId;
+          return `<button type="button" class="profile-pill${active?' active':''}" data-id="${p.id}">${(p.me || 'Osoba').replace(/</g,'&lt;')}</button>`;
+        }).join('');
+      
       Array.from(listWrap.querySelectorAll('.profile-pill')).forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.onclick = () => {
           const id = btn.getAttribute('data-id');
           const profile = savedProfiles.find(p => p.id === id);
           if (profile) {
             document.getElementById('profileInput').value = profile.me || '';
             document.getElementById('loadProfileBtn').click();
           }
-        });
+        };
       });
     }
   }
@@ -410,6 +415,14 @@ function applyProfile(profile){
   ME_NAME = profile.me || '';
   localStorage.setItem('dashboard-profile-id', profileId);
   localStorage.setItem('dashboard-me', ME_NAME);
+  
+  // Zapamiętaj ostatnio używane profile na tym urządzeniu
+  let recents = JSON.parse(localStorage.getItem('dashboard-recent-profile-ids') || '[]');
+  recents = recents.filter(id => id !== profileId);
+  recents.unshift(profileId);
+  recents = recents.slice(0, 3);
+  localStorage.setItem('dashboard-recent-profile-ids', JSON.stringify(recents));
+
   const members = Array.isArray(profile.members) ? profile.members.filter(Boolean) : [];
   crew = members.filter(n => DATA?.users?.[n]);
   if (ME_NAME && !crew.includes(ME_NAME) && DATA?.users?.[ME_NAME]) {
@@ -992,17 +1005,43 @@ async function addAthlete(){
 }
 
 (async function init(){
-  // Obsługa zwijania panelu bocznego
-  const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
+  // Obsługa panelu bocznego (Drawer dla mobile, Collapse/Expand dla desktop)
+  const toggleMobileBtn = document.getElementById('toggleSidebarBtnMobile');
+  const toggleDesktopBtn = document.getElementById('toggleSidebarBtnDesktop');
+  const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+  const sidebarBackdrop = document.getElementById('sidebarBackdrop');
   const gridLayout = document.getElementById('dashboardGridLayout');
-  if (toggleSidebarBtn && gridLayout) {
+
+  const openSidebarMobile = () => {
+    document.body.classList.add('sidebar-open');
+  };
+  const closeSidebarMobile = () => {
+    document.body.classList.remove('sidebar-open');
+  };
+
+  if (toggleMobileBtn) {
+    toggleMobileBtn.onclick = openSidebarMobile;
+  }
+  if (closeSidebarBtn) {
+    closeSidebarBtn.onclick = closeSidebarMobile;
+  }
+  if (sidebarBackdrop) {
+    sidebarBackdrop.onclick = closeSidebarMobile;
+  }
+
+  // Obsługa zwijania panelu na desktopie
+  if (toggleDesktopBtn && gridLayout) {
     const isCollapsed = localStorage.getItem('dashboard-sidebar-collapsed') === 'true';
     if (isCollapsed) {
       gridLayout.classList.add('sidebar-collapsed');
+      toggleDesktopBtn.textContent = '▶';
     }
-    toggleSidebarBtn.onclick = () => {
+    toggleDesktopBtn.onclick = () => {
       const collapsedNow = gridLayout.classList.toggle('sidebar-collapsed');
       localStorage.setItem('dashboard-sidebar-collapsed', collapsedNow ? 'true' : 'false');
+      toggleDesktopBtn.textContent = collapsedNow ? '▶' : '◀';
+      
+      // Zmień rozmiar wykresów po zakończeniu animacji
       setTimeout(() => {
         Object.values(charts).forEach(c => {
           if (c) c.resize();
@@ -1010,6 +1049,25 @@ async function addAthlete(){
       }, 360);
     };
   }
+
+  // Obsługa zakładek wykresów dla urządzeń mobilnych
+  document.querySelectorAll('.chart-tab').forEach(tab => {
+    tab.onclick = () => {
+      document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const chartId = tab.dataset.chart;
+      document.querySelectorAll('.chart-card-wrapper').forEach(card => {
+        card.classList.toggle('active', card.dataset.chart === chartId);
+      });
+      // Wymuś odrysowanie wykresu w nowo pokazanym kontenerze
+      const activeChart = charts[chartId];
+      if (activeChart) {
+        setTimeout(() => {
+          activeChart.resize();
+        }, 50);
+      }
+    };
+  });
 
   // Podepnij przycisk odświeżania
   const btn = document.getElementById('refreshBtn');

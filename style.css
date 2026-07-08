@@ -286,88 +286,94 @@
     transition: width 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
     overflow: visible; /* changed from hidden to allow suggestions list overflow */
   }
-  .sidebar-toggle-row {
+  .sidebar-desktop-header {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 12px;
     padding: 0 4px;
     height: 40px;
     flex-shrink: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 8px;
   }
-  .sidebar-burger-btn {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    color: var(--text);
-    width: 38px;
-    height: 38px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 16px;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-  }
-  .sidebar-burger-btn:hover {
-    color: var(--teal);
-    border-color: var(--teal);
-    background: rgba(6, 182, 212, 0.05);
-  }
-  .sidebar-toggle-label {
+  .sidebar-title-text {
     font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: .08em;
     color: var(--muted);
     transition: opacity 0.25s ease;
     white-space: nowrap;
-    opacity: 1;
   }
-  
-  /* Collapsed state styles */
-  .sidebar-collapsed .dashboard-sidebar {
-    width: 60px;
-    overflow: hidden; /* crop content during collapsed state */
-  }
-  .sidebar-collapsed .sidebar-toggle-row {
-    justify-content: center;
-    padding: 0;
-  }
-  .sidebar-collapsed .sidebar-toggle-label {
-    opacity: 0;
-    width: 0;
-    pointer-events: none;
-    display: none;
-  }
-  .sidebar-collapsed .sidebar-section {
-    padding: 10px;
+  .sidebar-collapse-btn-desktop {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-muted);
+    width: 28px;
+    height: 28px;
     display: flex;
-    justify-content: center;
     align-items: center;
-    border-radius: 12px;
-    min-height: 40px;
-  }
-  .sidebar-collapsed .sidebar-section .section-head {
-    margin-bottom: 0;
     justify-content: center;
-    width: 100%;
-    gap: 0;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.2s ease;
   }
-  .sidebar-collapsed .sidebar-section .section-head h2,
-  .sidebar-collapsed .sidebar-section .section-head .section-hint,
-  .sidebar-collapsed .sidebar-section > *:not(.section-head) {
+  .sidebar-collapse-btn-desktop:hover {
+    color: var(--teal);
+    border-color: var(--teal);
+    background: rgba(6, 182, 212, 0.05);
+  }
+  .sidebar-burger-btn-mobile {
     display: none !important;
   }
-  .sidebar-collapsed .sidebar-section .section-num {
-    margin: 0;
-    font-size: 12px;
-    padding: 4px 6px;
-    background: rgba(6, 182, 212, 0.08);
-    border-color: rgba(6, 182, 212, 0.25);
-    color: var(--teal);
-    box-shadow: 0 0 8px rgba(6, 182, 212, 0.15);
+  .sidebar-mobile-header {
+    display: none !important;
+  }
+  
+  /* Collapsed state styles (Restricted to Desktop only) */
+  @media (min-width: 1025px) {
+    .sidebar-collapsed .dashboard-sidebar {
+      width: 60px;
+      overflow: hidden; /* crop content during collapsed state */
+    }
+    .sidebar-collapsed .sidebar-desktop-header {
+      justify-content: center;
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+    .sidebar-collapsed .sidebar-title-text {
+      display: none;
+    }
+    .sidebar-collapsed .sidebar-section {
+      padding: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 12px;
+      min-height: 40px;
+    }
+    .sidebar-collapsed .sidebar-section .section-head {
+      margin-bottom: 0;
+      justify-content: center;
+      width: 100%;
+      gap: 0;
+    }
+    .sidebar-collapsed .sidebar-section .section-head h2,
+    .sidebar-collapsed .sidebar-section .section-head .section-hint,
+    .sidebar-collapsed .sidebar-section > *:not(.section-head) {
+      display: none !important;
+    }
+    .sidebar-collapsed .sidebar-section .section-num {
+      margin: 0;
+      font-size: 12px;
+      padding: 4px 6px;
+      background: rgba(6, 182, 212, 0.08);
+      border-color: rgba(6, 182, 212, 0.25);
+      color: var(--teal);
+      box-shadow: 0 0 8px rgba(6, 182, 212, 0.15);
+    }
   }
   .dashboard-main {
     flex: 1;
@@ -923,19 +929,110 @@
       gap: 20px;
     }
     .dashboard-sidebar {
-      width: 100%;
-      max-height: 2000px;
-      transition: max-height 0.35s ease, margin-bottom 0.35s ease, opacity 0.25s ease, visibility 0.35s;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 320px;
+      height: 100vh;
+      background: rgba(13, 20, 38, 0.98);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      z-index: 2000;
+      padding: 20px;
+      box-shadow: 20px 0 50px rgba(0, 0, 0, 0.7);
+      transform: translateX(-100%);
+      transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-y: auto;
+      border-radius: 0; /* Full height drawer */
     }
-    .sidebar-collapsed .dashboard-sidebar {
-      width: 100%;
-      max-height: 0;
-      margin-bottom: -20px;
-      margin-right: 0;
+    .sidebar-desktop-header {
+      display: none !important;
+    }
+    body.sidebar-open .dashboard-sidebar {
+      transform: translateX(0);
+    }
+    
+    /* Sliding backdrop */
+    .sidebar-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      z-index: 1999;
       opacity: 0;
       visibility: hidden;
-      pointer-events: none;
-      overflow: hidden; /* crop content during collapsed state on mobile */
+      transition: all 0.25s ease;
+    }
+    body.sidebar-open .sidebar-backdrop {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* Mobile Header inside drawer */
+    .sidebar-mobile-header {
+      display: flex !important;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      margin-bottom: 10px;
+    }
+    .sidebar-mobile-header span {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .sidebar-close-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 28px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0 4px;
+      transition: color 0.15s ease;
+    }
+    .sidebar-close-btn:hover {
+      color: var(--coral);
+    }
+
+    /* Beautiful Text Burger button inside header actions */
+    .sidebar-burger-btn-mobile {
+      display: inline-flex !important;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: rgba(6, 182, 212, 0.08);
+      border: 1px solid rgba(6, 182, 212, 0.25);
+      border-radius: 10px;
+      color: var(--teal);
+      padding: 10px 14px;
+      height: 38px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+    }
+    .sidebar-burger-btn-mobile:hover {
+      background: rgba(6, 182, 212, 0.18);
+      border-color: var(--teal);
+      box-shadow: 0 0 10px rgba(6, 182, 212, 0.25);
     }
     .dashboard-main {
       width: 100%;
@@ -1222,4 +1319,62 @@
   }
   .suggestions-list::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.2);
+  }
+
+
+
+  /* =====================================================================
+     MOBILE CHART TABS
+     ===================================================================== */
+  .chart-tabs-container {
+    display: none; /* Hidden on desktop */
+  }
+
+  @media (max-width: 1024px) {
+    .chart-tabs-container {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 12px;
+      margin-bottom: 16px;
+      scrollbar-width: none; /* Hide standard firefox scrollbar */
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    .chart-tabs-container::-webkit-scrollbar {
+      display: none; /* Hide webkit scrollbar */
+    }
+
+    .chart-tab {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      color: var(--text-muted);
+      padding: 8px 16px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .chart-tab.active {
+      background: rgba(46, 196, 182, 0.12);
+      border-color: var(--teal);
+      color: var(--teal);
+      box-shadow: 0 0 10px rgba(46, 196, 182, 0.2);
+    }
+
+    /* Hide non-active chart containers in mobile view */
+    .chart-card-wrapper {
+      display: none !important;
+    }
+    .chart-card-wrapper.active {
+      display: block !important;
+    }
+    
+    .charts-grid {
+      display: block !important; /* Stack active chart as single block */
+    }
   }
