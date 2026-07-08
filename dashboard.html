@@ -102,6 +102,28 @@
     background: linear-gradient(to right, #ffffff, #cbd5e1);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    display: inline-flex;
+    align-items: center;
+  }
+  .user-badge {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: none;
+    color: var(--teal);
+    background: rgba(6, 182, 212, 0.08);
+    border: 1px solid rgba(6, 182, 212, 0.25);
+    padding: 4px 10px;
+    border-radius: 20px;
+    margin-left: 12px;
+    vertical-align: middle;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 0 10px rgba(6, 182, 212, 0.15);
+    -webkit-text-fill-color: var(--teal);
+    text-shadow: none;
+    letter-spacing: normal;
   }
   .title-block .subtitle {
     color: var(--muted);
@@ -1132,7 +1154,7 @@
   <header class="dashboard-header glass-card">
     <div class="title-block">
       <div class="eyebrow">Eco Challenge  Tablica wyników</div>
-      <h1>Tabela FIN</h1>
+      <h1>Tabela FIN <span class="user-badge" id="currentUserBadge" style="display: none;"></span></h1>
       <div class="subtitle" id="subtitleText">Ładowanie danych…</div>
     </div>
     <div class="header-right">
@@ -1582,11 +1604,23 @@ async function refreshData(force = false) {
 function updateHeader() {
   const sub = document.getElementById('subtitleText');
   if (sub) sub.innerHTML = `${fmtDateShort(DATA.dateRange[0])} – ${fmtDateShort(DATA.dateRange[1])} &nbsp;·&nbsp; <b>${DATA.totalUsers}</b> zawodników w pełnej klasyfikacji`;
+  
+  // Zaktualizuj plakietkę aktywnego użytkownika (JA)
+  const badge = document.getElementById('currentUserBadge');
+  if (badge) {
+    if (ME_NAME) {
+      badge.innerHTML = `👤 JA: <b>${ME_NAME}</b>`;
+      badge.style.display = 'inline-flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
   [['tv0', DATA.totals.distance.toLocaleString('pl-PL')],
    ['tv1', DATA.totals.count.toLocaleString('pl-PL')],
    ['tv2', Math.round(DATA.totals.points).toLocaleString('pl-PL')],
    ['tv3', fmtTime(DATA.totals.time)]
-  ].forEach(([id,val]) => { const el = document.getElementById(id); if(el) el.textContent = val; });
+   ].forEach(([id,val]) => { const el = document.getElementById(id); if(el) el.textContent = val; });
 
   const footer = document.getElementById('dashboardFooter');
   if (footer && DATA.dateRange) {
