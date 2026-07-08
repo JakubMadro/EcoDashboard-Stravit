@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rywalizacja Sportowa — Tablica Wyników</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="chart.umd.min.js"></script>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="track-lines-neon"></div>
+  
+  <header class="dashboard-header glass-card">
+    <div class="title-block">
+      <div class="eyebrow">Eco Challenge  Tablica wyników</div>
+      <h1>Tabela FIN <span class="user-badge" id="currentUserBadge" style="display: none;"></span></h1>
+      <div class="subtitle" id="subtitleText">Ładowanie danych…</div>
+    </div>
+    <div class="header-right">
+      <div class="ticker" id="tickerBox">
+        <div class="ticker-item"><div class="ticker-val" id="tv0">…</div><div class="ticker-label">km łącznie</div></div>
+        <div class="ticker-item"><div class="ticker-val" id="tv1">…</div><div class="ticker-label">aktywności</div></div>
+        <div class="ticker-item"><div class="ticker-val" id="tv2">…</div><div class="ticker-label">pkt rozdano</div></div>
+        <div class="ticker-item"><div class="ticker-val" id="tv3">…</div><div class="ticker-label">w ruchu</div></div>
+      </div>
+      <div class="header-actions">
+        <span id="refreshStatus" class="status-time"></span>
+        <button id="refreshBtn" class="btn btn-teal">
+          ↻ Odśwież dane
+        </button>
+      </div>
+      <form class="auth-panel" id="authPanel" autocomplete="on">
+        <input type="email" id="authEmail" placeholder="email Stravit" autocomplete="username">
+        <input type="password" id="authPassword" placeholder="hasło" autocomplete="current-password">
+        <button type="submit" id="authBtn" class="btn btn-amber">Zaloguj</button>
+        <div class="auth-msg" id="authMsg"></div>
+      </form>
+    </div>
+  </header>
+
+  <div class="dashboard-grid-layout" id="dashboardGridLayout">
+    <!-- Sidebar Controls -->
+    <aside class="dashboard-sidebar" id="dashboardSidebar">
+      <div class="sidebar-toggle-row">
+        <button id="toggleSidebarBtn" class="sidebar-burger-btn" title="Zwiń/Rozwiń panel">
+          ☰
+        </button>
+        <span class="sidebar-toggle-label">Filtry i ekipa</span>
+      </div>
+      <section class="sidebar-section glass-card">
+        <div class="section-head">
+          <span class="section-num">01</span>
+          <h2>Zarządzanie ekipą</h2>
+        </div>
+        <div>
+          <div class="chips" id="chips"></div>
+          <div class="add-row-new">
+            <div class="search-box-new autocomplete-wrapper">
+              <input id="addInput" placeholder="Dodaj zawodnika…" autocomplete="off">
+              <span class="search-icon">⌕</span>
+              <div class="suggestions-list" id="addSuggestions"></div>
+            </div>
+            <button class="btn btn-primary" id="addBtn">+ Dodaj</button>
+          </div>
+          <div class="add-msg" id="addMsg"></div>
+        </div>
+      </section>
+
+      <section class="sidebar-section glass-card">
+        <div class="section-head">
+          <span class="section-num">02</span>
+          <h2>Twój profil (JA)</h2>
+        </div>
+        <div class="profile-card-new" id="profileCard">
+          <div class="profile-top">
+            <div class="profile-avatar">P</div>
+            <div class="profile-info">
+              <div class="profile-title">Aktywny profil</div>
+              <div class="profile-status" id="profileStatus">Brak aktywnego profilu</div>
+            </div>
+            <button type="button" id="profileCollapseBtn" class="profile-collapse-btn">Zwiń</button>
+          </div>
+          <div id="profileCardContent">
+            <div class="profile-grid">
+              <div class="input-label autocomplete-wrapper">
+                <span>Zapisany profil</span>
+                <input id="profileInput" placeholder="Szukaj profilu…" autocomplete="off">
+                <div class="suggestions-list" id="profileSuggestions"></div>
+              </div>
+              <button id="loadProfileBtn" class="btn btn-secondary">Wczytaj</button>
+            </div>
+            <div id="profileHint" class="profile-hint">Wybierz profil lub kliknij niżej, żeby utworzyć.</div>
+            
+            <div id="createProfileBlock" class="create-profile-block" style="display: none;">
+              <div class="profile-grid">
+                <div class="input-label autocomplete-wrapper">
+                  <span>Wskaż siebie (JA)</span>
+                  <input id="meInput" placeholder="Zawodnik..." autocomplete="off">
+                  <div class="suggestions-list" id="meSuggestions"></div>
+                </div>
+                <button id="createProfileBtn" class="btn btn-primary">Utwórz</button>
+              </div>
+            </div>
+            <button id="toggleCreateProfileBtn" class="btn btn-ghost">+ Utwórz nowy profil</button>
+            <div id="profileMsg" class="add-msg"></div>
+            <div id="profileListWrap" class="profiles-pill-grid"></div>
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- Main Panel -->
+    <main class="dashboard-main">
+      <section class="glass-card main-section">
+        <div class="section-head">
+          <span class="section-num">03</span>
+          <h2>Karty startowe</h2>
+          <span class="section-hint">miejsce w klasyfikacji generalnej</span>
+        </div>
+        <div class="bib-grid" id="bibGrid"></div>
+      </section>
+
+      <section class="glass-card main-section">
+        <div class="section-head">
+          <span class="section-num">04</span>
+          <h2>Analiza i wykresy</h2>
+          <span class="section-hint">dane szczegółowe ekipy</span>
+        </div>
+        <div class="charts-grid">
+          <div class="chart-container">
+            <div class="chart-header">
+              <h3>Postęp skumulowany</h3>
+              <span class="chart-subtitle">Łączna suma punktów w kolejnych dniach</span>
+              <button class="expand-chart-btn" title="Pokaż na pełnym ekranie" onclick="openChartModal('cumulative')">⛶</button>
+            </div>
+            <div class="chart-box tall"><canvas id="cumulativeChart"></canvas></div>
+          </div>
+          
+          <div class="chart-container">
+            <div class="chart-header">
+              <h3>Punkty — porównanie</h3>
+              <span class="chart-subtitle">Łączne punkty członków ekipy</span>
+              <button class="expand-chart-btn" title="Pokaż na pełnym ekranie" onclick="openChartModal('bar')">⛶</button>
+            </div>
+            <div class="chart-box tall"><canvas id="barChart"></canvas></div>
+          </div>
+
+          <div class="chart-container">
+            <div class="chart-header">
+              <h3>Dzienna forma</h3>
+              <span class="chart-subtitle">Punkty zdobyte każdego dnia wyzwania</span>
+              <button class="expand-chart-btn" title="Pokaż na pełnym ekranie" onclick="openChartModal('line')">⛶</button>
+            </div>
+            <div class="chart-box tall"><canvas id="lineChart"></canvas></div>
+          </div>
+
+          <div class="chart-container">
+            <div class="chart-header">
+              <h3>Z czego te punkty</h3>
+              <span class="chart-subtitle">Rozkład punktów według typu treningu</span>
+              <button class="expand-chart-btn" title="Pokaż na pełnym ekranie" onclick="openChartModal('stack')">⛶</button>
+            </div>
+            <div class="chart-box tall"><canvas id="stackChart"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="main-bottom-grid">
+        <section class="glass-card main-section">
+          <div class="section-head">
+            <span class="section-num">05</span>
+            <h2>Statystyki podsumowania</h2>
+            <span class="section-hint">najciekawsze liczby z wyzwania</span>
+          </div>
+          <div class="stats-grid" id="statsGrid"></div>
+        </section>
+
+        <section class="glass-card main-section">
+          <div class="section-head">
+            <span class="section-num">06</span>
+            <h2>Top 10 generalnej</h2>
+            <span class="section-hint">Twoja ekipa podświetlona</span>
+          </div>
+          <div class="leaderboard-box">
+            <table>
+              <thead><tr><th>#</th><th>Zawodnik</th><th style="text-align:right;">Punkty</th></tr></thead>
+              <tbody id="top10Body"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <footer id="dashboardFooter">DANE: EKSPORT WYZWANIA</footer>
+</div>
+
+<div id="chartModal" class="chart-modal">
+  <span class="close-modal" onclick="closeChartModal()">&times;</span>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="modalChartTitle">Wykres</h3>
+      <span id="modalChartSubtitle" class="modal-subtitle">Analiza szczegółowa</span>
+    </div>
+    <div class="modal-chart-box">
+      <canvas id="modalChartCanvas"></canvas>
+    </div>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+
+</body>
+</html>
