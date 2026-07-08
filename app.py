@@ -152,8 +152,8 @@ def load_challenge_data(slug, force=False, full_import=False):
     
     if force:
         with _sync_lock:
-            # Enforce rate limit (skip Stravit API hit if within limit)
-            if now - _last_sync_time < SYNC_RATE_LIMIT_SECONDS:
+            # Enforce rate limit for normal syncs, bypass for admin full import
+            if not full_import and (now - _last_sync_time < SYNC_RATE_LIMIT_SECONDS):
                 logger.info(f"Sync rate limit active. Bypassing Stravit API hit. Elapsed: {now - _last_sync_time:.0f}s")
             else:
                 try:
