@@ -81,39 +81,30 @@
           <h2>Twój profil (JA)</h2>
         </div>
         <div class="profile-card-new" id="profileCard">
-          <div class="profile-top">
-            <div class="profile-avatar">P</div>
-            <div class="profile-info">
-              <div class="profile-title">Aktywny profil</div>
-              <div class="profile-status" id="profileStatus">Brak aktywnego profilu</div>
+          
+          <div class="profile-input-group">
+            <div class="input-label autocomplete-wrapper">
+              <span>Wybierz swój profil</span>
+              <input id="profileInput" placeholder="Szukaj profilu…" autocomplete="off">
+              <div class="suggestions-list" id="profileSuggestions"></div>
             </div>
-            <button type="button" id="profileCollapseBtn" class="profile-collapse-btn">Zwiń</button>
+            <button id="loadProfileBtn" class="btn btn-secondary">Wczytaj</button>
           </div>
-          <div id="profileCardContent">
-            <div class="profile-grid">
-              <div class="input-label autocomplete-wrapper">
-                <span>Zapisany profil</span>
-                <input id="profileInput" placeholder="Szukaj profilu…" autocomplete="off">
-                <div class="suggestions-list" id="profileSuggestions"></div>
-              </div>
-              <button id="loadProfileBtn" class="btn btn-secondary">Wczytaj</button>
-            </div>
-            <div id="profileHint" class="profile-hint">Wybierz profil lub kliknij niżej, żeby utworzyć.</div>
-            
-            <div id="createProfileBlock" class="create-profile-block" style="display: none;">
-              <div class="profile-grid">
-                <div class="input-label autocomplete-wrapper">
-                  <span>Wskaż siebie (JA)</span>
-                  <input id="meInput" placeholder="Zawodnik..." autocomplete="off">
-                  <div class="suggestions-list" id="meSuggestions"></div>
-                </div>
-                <button id="createProfileBtn" class="btn btn-primary">Utwórz</button>
-              </div>
-            </div>
-            <button id="toggleCreateProfileBtn" class="btn btn-ghost">+ Utwórz nowy profil</button>
-            <div id="profileMsg" class="add-msg"></div>
-            <div id="profileListWrap" class="profiles-pill-grid"></div>
+
+          <div class="profile-divider">
+            <span>Nie ma Twojego profilu?</span>
           </div>
+
+          <div class="profile-create-group">
+            <div class="autocomplete-wrapper">
+              <input id="meInput" placeholder="Wpisz swoje imię i nazwisko…" autocomplete="off">
+              <div class="suggestions-list" id="meSuggestions"></div>
+            </div>
+            <button id="createProfileBtn" class="btn btn-primary">Utwórz profil</button>
+          </div>
+
+          <div id="profileMsg" class="add-msg"></div>
+          <div id="profileListWrap" class="profiles-pill-grid"></div>
         </div>
       </section>
     </aside>

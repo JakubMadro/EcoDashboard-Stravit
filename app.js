@@ -234,7 +234,7 @@ async function refreshData(force = false) {
 
       if (resolvedCrew) {
         if (activeId === profileId) {
-          applyProfile(resolvedCrew);
+          applyProfile(resolvedCrew, false);
         } else {
           crew = Array.isArray(resolvedCrew) ? resolvedCrew : (resolvedCrew.members || []);
         }
@@ -325,20 +325,6 @@ function getCrewStorageKey(){
   return profileId ? `tracked-athletes-${profileId}` : 'tracked-athletes';
 }
 
-function updateProfileCardState(){
-  const card = document.getElementById('profileCard');
-  const button = document.getElementById('profileCollapseBtn');
-  if (!card || !button) return;
-  card.classList.toggle('collapsed', profileCollapsed);
-  button.textContent = profileCollapsed ? 'Rozwiń' : 'Zwiń';
-}
-
-function toggleProfileCard(){
-  profileCollapsed = !profileCollapsed;
-  localStorage.setItem('dashboard-profile-collapsed', profileCollapsed ? 'true' : 'false');
-  updateProfileCardState();
-}
-
 function resolveName(value){
   const trimmed = (value || '').trim();
   const names = ALL_NAMES || [];
@@ -351,36 +337,16 @@ function resolveName(value){
 
 function renderProfileControls(){
   const profileInput = document.getElementById('profileInput');
-  const profileList = document.getElementById('profileList');
   const meInput = document.getElementById('meInput');
-  const createBlock = document.getElementById('createProfileBlock');
-  const toggleBtn = document.getElementById('toggleCreateProfileBtn');
-  const hint = document.getElementById('profileHint');
-  const status = document.getElementById('profileStatus');
-  // list_crew_profiles and savedProfiles handle profiles dropdown
-  // We use custom autocomplete, so native datalist setup is removed.
+  
   if (profileInput) {
-    profileInput.value = profileId && ME_NAME ? ME_NAME : '';
+    profileInput.value = ''; // Always empty for clean search
+    profileInput.placeholder = ME_NAME ? `Profil: ${ME_NAME}` : 'Szukaj profilu…';
   }
   if (meInput) {
-    meInput.value = ME_NAME || '';
+    meInput.value = ''; // Always clean for new profile creation
   }
-  if (createBlock) {
-    createBlock.style.display = 'none';
-  }
-  if (toggleBtn) {
-    toggleBtn.style.display = 'block';
-    toggleBtn.textContent = '+ Utwórz nowy profil';
-  }
-  if (hint) {
-    hint.textContent = profileId && ME_NAME
-      ? `Aktywny profil: ${ME_NAME}`
-      : 'Nie istnieje? Kliknij poniżej, żeby utworzyć profil.';
-  }
-  if (status) {
-    status.textContent = profileId && ME_NAME ? `Aktywny profil • ${ME_NAME}` : 'Brak aktywnego profilu';
-  }
-  updateProfileCardState();
+  
   const listWrap = document.getElementById('profileListWrap');
   if (listWrap) {
     const recents = JSON.parse(localStorage.getItem('dashboard-recent-profile-ids') || '[]');
@@ -396,20 +362,16 @@ function renderProfileControls(){
         }).join('');
       
       Array.from(listWrap.querySelectorAll('.profile-pill')).forEach(btn => {
-        btn.onclick = () => {
+        btn.onclick = async () => {
           const id = btn.getAttribute('data-id');
-          const profile = savedProfiles.find(p => p.id === id);
-          if (profile) {
-            document.getElementById('profileInput').value = profile.me || '';
-            document.getElementById('loadProfileBtn').click();
-          }
+          await loadProfileById(id);
         };
       });
     }
   }
 }
 
-function applyProfile(profile){
+function applyProfile(profile, triggerApiRefresh = true){
   if (!profile) return;
   profileId = profile.id || '';
   ME_NAME = profile.me || '';
@@ -430,7 +392,12 @@ function applyProfile(profile){
   }
   localStorage.setItem(getCrewStorageKey(), JSON.stringify(crew));
   renderProfileControls();
-  renderAll();
+  
+  if (triggerApiRefresh) {
+    refreshData(false);
+  } else {
+    renderAll();
+  }
 }
 
 async function loadSavedProfiles(){
@@ -486,7 +453,7 @@ async function createProfile(){
     profileMsg.textContent = `Profil dla ${ME_NAME} utworzony.`;
     profileMsg.className = 'add-msg';
   }
-  renderAll();
+  await refreshData(false); // Odśwież dane z nowym filtrem profilu!
 }
 
 function fmtTime(sec){
@@ -606,18 +573,24 @@ function setupCustomAutocomplete(inputId, suggestionsId, getSourceFn, onSelect) 
       return;
     }
 
-    currentItems = source.filter(name => name.toLowerCase().includes(cleanQuery)).slice(0, 6);
+    currentItems = source.filter(item => {
+      const str = typeof item === 'object' && item !== null ? (item.me || item.name || '') : item;
+      return String(str).toLowerCase().includes(cleanQuery);
+    }).slice(0, 6);
+
     if (currentItems.length === 0) {
       closeSuggestions();
       return;
     }
 
     list.innerHTML = currentItems.map((item, idx) => {
-      const startIdx = item.toLowerCase().indexOf(cleanQuery);
+      const str = typeof item === 'object' && item !== null ? (item.me || item.name || '') : item;
+      const cleanStr = String(str);
+      const startIdx = cleanStr.toLowerCase().indexOf(cleanQuery);
       const endIdx = startIdx + cleanQuery.length;
-      const highlighted = item.substring(0, startIdx) + 
-                          `<span class="match">${item.substring(startIdx, endIdx)}</span>` + 
-                          item.substring(endIdx);
+      const highlighted = cleanStr.substring(0, startIdx) + 
+                          `<span class="match">${cleanStr.substring(startIdx, endIdx)}</span>` + 
+                          cleanStr.substring(endIdx);
       return `<div class="suggestion-item" data-index="${idx}">${highlighted}</div>`;
     }).join('');
 
@@ -627,7 +600,8 @@ function setupCustomAutocomplete(inputId, suggestionsId, getSourceFn, onSelect) 
     list.querySelectorAll('.suggestion-item').forEach(el => {
       el.onclick = () => {
         const val = currentItems[parseInt(el.dataset.index)];
-        input.value = val;
+        const str = typeof val === 'object' && val !== null ? (val.me || val.name || '') : val;
+        input.value = String(str);
         closeSuggestions();
         if (onSelect) onSelect(val);
       };
@@ -659,7 +633,8 @@ function setupCustomAutocomplete(inputId, suggestionsId, getSourceFn, onSelect) 
       e.preventDefault();
       if (activeIndex >= 0 && activeIndex < currentItems.length) {
         const val = currentItems[activeIndex];
-        input.value = val;
+        const str = typeof val === 'object' && val !== null ? (val.me || val.name || '') : val;
+        input.value = String(str);
         closeSuggestions();
         if (onSelect) onSelect(val);
       }
@@ -936,32 +911,35 @@ document.getElementById('addInput').addEventListener('keydown', e=>{ if(e.key===
 document.getElementById('authPanel').addEventListener('submit', loginToStravit);
 document.getElementById('createProfileBtn').onclick = createProfile;
 document.getElementById('profileCollapseBtn')?.addEventListener('click', toggleProfileCard);
-document.getElementById('toggleCreateProfileBtn').onclick = ()=>{
-  const createBlock = document.getElementById('createProfileBlock');
-  if (!createBlock) return;
-  const isVisible = createBlock.style.display === 'grid';
-  createBlock.style.display = isVisible ? 'none' : 'grid';
-  const toggleBtn = document.getElementById('toggleCreateProfileBtn');
-  if (toggleBtn) {
-    toggleBtn.textContent = isVisible ? '+ Utwórz nowy profil' : '− Zamknij tworzenie profilu';
+async function loadProfileById(id) {
+  const profile = savedProfiles.find(p => p.id === id);
+  if (!profile) return;
+
+  try {
+    const resp = await fetch(`/api/v1/crew?id=${encodeURIComponent(profile.id)}`);
+    if (resp.ok) {
+      const payload = await resp.json();
+      if (payload && typeof payload === 'object') {
+        applyProfile(payload, true); // Wczytaj z flagą odświeżania API
+        return;
+      }
+    }
+  } catch (e) {
+    console.error('Błąd wczytywania profilu:', e);
   }
-};
+  applyProfile({ id: profile.id, me: profile.me, members: [] }, true);
+}
+
 document.getElementById('loadProfileBtn').onclick = async ()=>{
   const input = document.getElementById('profileInput');
   const value = (input?.value || '').trim();
   if (!value) return;
   const profile = savedProfiles.find(p => (p.me || '').trim().toLowerCase() === value.trim().toLowerCase());
   if (profile) {
-    applyProfile({ id: profile.id, me: profile.me, members: [] });
-    try {
-      const resp = await fetch(`/api/v1/crew?id=${encodeURIComponent(profile.id)}`);
-      if (resp.ok) {
-        const payload = await resp.json();
-        if (payload && typeof payload === 'object') {
-          applyProfile(payload);
-        }
-      }
-    } catch (e) {}
+    await loadProfileById(profile.id);
+    input.value = ''; // Wyczyść pole wyszukiwania po udanym wczytaniu
+    const profileMsg = document.getElementById('profileMsg');
+    if (profileMsg) profileMsg.textContent = '';
   } else {
     const profileMsg = document.getElementById('profileMsg');
     if (profileMsg) {
@@ -1103,8 +1081,11 @@ async function addAthlete(){
 
   // Inicjalizacja autouzupełniania dla pól wyszukiwania
   setupCustomAutocomplete('addInput', 'addSuggestions', ensureNamesLoaded);
-  setupCustomAutocomplete('profileInput', 'profileSuggestions', () => savedProfiles.map(p => p.me), () => {
-    document.getElementById('loadProfileBtn').click();
+  setupCustomAutocomplete('profileInput', 'profileSuggestions', () => savedProfiles, async (profile) => {
+    if (profile && profile.id) {
+      await loadProfileById(profile.id);
+      document.getElementById('profileInput').value = '';
+    }
   });
   setupCustomAutocomplete('meInput', 'meSuggestions', ensureNamesLoaded);
 
