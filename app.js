@@ -189,7 +189,7 @@ async function loginToStravit(event) {
     password.value = '';
     setAuthPanelVisible(false);
     if (msg) msg.textContent = '';
-    await refreshData(true, true);
+    await refreshData(true, false);
   } catch(err) {
     if (msg) { msg.textContent = err.message; msg.style.color = 'var(--coral)'; }
   } finally {
