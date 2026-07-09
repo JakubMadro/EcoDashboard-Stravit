@@ -288,6 +288,16 @@ def app(environ, start_response):
             except Exception as exc:
                 return _send_json(start_response, 502, {"error": str(exc)})
 
+        # Get raw activities list for admin validation
+        match_acts = re.fullmatch(r"/challenge/([^/]+)/activities", api_path)
+        if match_acts and method == "GET":
+            slug = urllib.parse.unquote(match_acts.group(1))
+            try:
+                activities = load_activities(slug) or []
+                return _send_json(start_response, 200, activities)
+            except Exception as e:
+                return _send_json(start_response, 502, {"error": str(e)})
+
         # Get sorted list of unique athlete names
         match_names = re.fullmatch(r"/challenge/([^/]+)/names", api_path)
         if match_names and method == "GET":

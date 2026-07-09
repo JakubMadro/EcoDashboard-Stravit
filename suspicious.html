@@ -156,7 +156,7 @@
       </div>
       
       <div class="glass-card metric-card">
-        <span class="metric-label">Najczęstszy powób</span>
+        <span class="metric-label">Najczęstszy powód</span>
         <div class="metric-val" id="commonReason" style="font-size: 24px; white-space: normal; line-height: 1.3; height: auto; margin-top: 12px; color: var(--warning);">Brak</div>
         <span class="metric-sub">anomalia najczęściej wykrywana</span>
       </div>
@@ -343,26 +343,11 @@
 
   async function loadData() {
     try {
-      const response = await fetch('/api/v1/challenge/rywalizacja-sportowa/data?force=false');
+      const response = await fetch('/api/v1/challenge/rywalizacja-sportowa/activities');
       if (!response.ok) throw new Error('Błąd serwera');
       
-      const payload = await response.json();
-      
-      let activities = [];
-      if (payload.activities) {
-        activities = payload.activities;
-      }
-
-      if (activities.length === 0) {
-        try {
-          const backupRes = await fetch('/data/activities_rywalizacja-sportowa.json');
-          if (backupRes.ok) {
-            activities = await backupRes.json();
-          }
-        } catch(e) {}
-      }
-
-      allActivities = activities;
+      const activities = await response.json();
+      allActivities = activities || [];
       processActivities();
     } catch(err) {
       document.getElementById('subtitleText').textContent = 'Błąd pobierania danych!';
