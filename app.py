@@ -32,7 +32,7 @@ SYNC_RATE_LIMIT_MINUTES = int(os.environ.get("SYNC_RATE_LIMIT_MINUTES", "30"))
 SYNC_RATE_LIMIT_SECONDS = SYNC_RATE_LIMIT_MINUTES * 60
 
 # Cache configurations
-CACHE_TTL_SECONDS = 3600
+CACHE_TTL_SECONDS = 0
 _cache = {}
 _cache_lock = threading.Lock()
 _last_sync_time = 0
