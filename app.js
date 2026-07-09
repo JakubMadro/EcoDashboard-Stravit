@@ -263,7 +263,6 @@ async function refreshData(force = false) {
     renderProfileControls();
 
     loadCrew();
-    crew = crew.filter(n => DATA.users[n]);
     if (ME_NAME && !crew.includes(ME_NAME)) {
       crew.unshift(ME_NAME);
     }
@@ -386,8 +385,8 @@ function applyProfile(profile, triggerApiRefresh = true){
   localStorage.setItem('dashboard-recent-profile-ids', JSON.stringify(recents));
 
   const members = Array.isArray(profile.members) ? profile.members.filter(Boolean) : [];
-  crew = members.filter(n => DATA?.users?.[n]);
-  if (ME_NAME && !crew.includes(ME_NAME) && DATA?.users?.[ME_NAME]) {
+  crew = members;
+  if (ME_NAME && !crew.includes(ME_NAME)) {
     crew.unshift(ME_NAME);
   }
   localStorage.setItem(getCrewStorageKey(), JSON.stringify(crew));
@@ -477,11 +476,11 @@ function loadCrew(){
     const raw = localStorage.getItem(getCrewStorageKey());
     if(raw){
       const arr = JSON.parse(raw);
-      if(Array.isArray(arr) && arr.length){ crew = arr.filter(n => DATA?.users?.[n]); return; }
+      if(Array.isArray(arr) && arr.length){ crew = arr; return; }
     }
   }catch(e){}
   crew = [];
-  if (ME_NAME && DATA?.users?.[ME_NAME]) {
+  if (ME_NAME) {
     crew.push(ME_NAME);
   }
 }
@@ -909,6 +908,16 @@ function renderRecentActivities() {
     return;
   }
 
+  const crewLower = crew.map(n => n.toLowerCase());
+  const filteredActivities = DATA.recentActivities.filter(act => 
+    crewLower.includes(act.name.toLowerCase())
+  );
+
+  if (filteredActivities.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:24px; color:var(--text-muted);">Brak ostatnich treningów dla wybranej ekipy.</td></tr>';
+    return;
+  }
+
   const SPORT_EMOJIS = {
     Run: '🏃', Walk: '🚶', Ride: '🚴', VirtualRide: '💻🚴', 
     Hike: '🥾', WeightTraining: '🏋️', Swim: '🏊', 
@@ -927,7 +936,7 @@ function renderRecentActivities() {
     return h > 0 ? `${h}h ${m}m` : `${m}m`;
   }
 
-  tbody.innerHTML = DATA.recentActivities.map(act => {
+  tbody.innerHTML = filteredActivities.map(act => {
     const displaySport = SPORT_NAMES[act.type] || act.type;
     const emoji = SPORT_EMOJIS[act.type] || '❓';
     const dateFormatted = act.dateRaw ? act.dateRaw.substring(5, 16) : act.dateStr;
@@ -968,11 +977,19 @@ function renderCrewLeaderboard() {
     return;
   }
 
-  const crewList = Object.keys(DATA.users).map(name => ({
-    name: name,
-    points: DATA.users[name].points,
-    generalRank: DATA.users[name].rank
-  }));
+  const crewLower = crew.map(n => n.toLowerCase());
+  const crewList = Object.keys(DATA.users)
+    .filter(name => crewLower.includes(name.toLowerCase()))
+    .map(name => ({
+      name: name,
+      points: DATA.users[name].points,
+      generalRank: DATA.users[name].rank
+    }));
+
+  if (crewList.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:24px; color:var(--text-muted);">Brak danych o członkach ekipy. Dodaj zawodnika w panelu bocznym!</td></tr>';
+    return;
+  }
 
   crewList.sort((a, b) => b.points - a.points);
 
