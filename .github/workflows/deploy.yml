@@ -27,6 +27,7 @@ jobs:
 
     - name: Zip application
       run: |
+        cp requirements.txt app/
         cd app
         zip -r ../release.zip .
         cd ..
