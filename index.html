@@ -140,6 +140,11 @@
               <span class="chart-subtitle">Łączna suma punktów w kolejnych dniach</span>
               <button class="expand-chart-btn" title="Pokaż na pełnym ekranie" onclick="openChartModal('cumulative')">⛶</button>
             </div>
+            <div class="chart-actions-toolbar">
+              <button onclick="toggleChartLegend('cumulative', true)" class="chart-action-btn">👁️ Pokaż wszystkich</button>
+              <button onclick="toggleChartLegend('cumulative', false)" class="chart-action-btn">🚫 Ukryj wszystkich</button>
+              <button onclick="toggleChartLegendSolo('cumulative')" class="chart-action-btn">👤 Tylko ja</button>
+            </div>
             <div class="chart-box tall"><canvas id="cumulativeChart"></canvas></div>
           </div>
           
@@ -157,6 +162,11 @@
               <h3>Dzienna forma</h3>
               <span class="chart-subtitle">Punkty zdobyte każdego dnia wyzwania</span>
               <button class="expand-chart-btn" title="Pokaż na pełnym ekranie" onclick="openChartModal('line')">⛶</button>
+            </div>
+            <div class="chart-actions-toolbar">
+              <button onclick="toggleChartLegend('line', true)" class="chart-action-btn">👁️ Pokaż wszystkich</button>
+              <button onclick="toggleChartLegend('line', false)" class="chart-action-btn">🚫 Ukryj wszystkich</button>
+              <button onclick="toggleChartLegendSolo('line')" class="chart-action-btn">👤 Tylko ja</button>
             </div>
             <div class="chart-box tall"><canvas id="lineChart"></canvas></div>
           </div>

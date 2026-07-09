@@ -305,7 +305,7 @@ function updateHeader() {
 
 // ==================== SCRIPT BLOCK ====================
 
-const PALETTE = ['#ffb700','#2ec4b6','#ef476f','#38bdf8','#a78bfa','#fb923c','#94e2d5','#f472b6'];
+const PALETTE = ['#ffb700','#2ec4b6','#ef476f','#38bdf8','#a78bfa','#fb923c','#94e2d5','#f472b6','#10b981','#6366f1','#ec4899','#06b6d4','#84cc16','#d946ef','#f97316','#3b82f6','#a855f7','#14b8a6','#0ea5e9','#4ade80'];
 let ME_NAME = localStorage.getItem('dashboard-me') || '';
 let crewId = localStorage.getItem('dashboard-crew-id');
 if (!crewId) {
@@ -1191,5 +1191,29 @@ function closeChartModal() {
   if (modalChart) {
     modalChart.destroy();
     modalChart = null;
+  }
+}
+
+function toggleChartLegend(chartKey, showAll) {
+  const chart = charts[chartKey];
+  if (!chart) return;
+  chart.data.datasets.forEach(d => { d.hidden = !showAll; });
+  chart.update();
+  
+  if (modalChart && document.getElementById('chartModal').classList.contains('show')) {
+    modalChart.data.datasets.forEach(d => { d.hidden = !showAll; });
+    modalChart.update();
+  }
+}
+
+function toggleChartLegendSolo(chartKey) {
+  const chart = charts[chartKey];
+  if (!chart) return;
+  chart.data.datasets.forEach(d => { d.hidden = (d.label !== ME_NAME); });
+  chart.update();
+  
+  if (modalChart && document.getElementById('chartModal').classList.contains('show')) {
+    modalChart.data.datasets.forEach(d => { d.hidden = (d.label !== ME_NAME); });
+    modalChart.update();
   }
 }

@@ -754,6 +754,7 @@
     flex-direction: column;
     gap: 14px;
     min-width: 0;
+    height: 100%;
   }
   .chart-header {
     display: flex;
@@ -763,22 +764,33 @@
     font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 14px;
     font-weight: 700;
+    color: #eef4f8;
     margin: 0;
-    color: var(--text);
+  }
+  .chart-header h3 + .chart-subtitle {
+    margin-top: 4px;
   }
   .chart-subtitle {
+    font-family: 'Inter', sans-serif;
     font-size: 11px;
     color: var(--muted);
   }
   .chart-box {
     position: relative;
     width: 100%;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
   }
-  .chart-box.tall { height: 280px; }
+  .chart-box.tall {
+    min-height: 280px;
+    height: 100%;
+  }
   .chart-box canvas {
     display: block;
     width: 100% !important;
     height: 100% !important;
+    flex-grow: 1;
   }
 
   /* ---- Bottom Grid ---- */
@@ -1350,4 +1362,37 @@
     .charts-grid {
       display: block !important; /* Stack active chart as single block */
     }
+  }
+
+  /* =====================================================================
+     CHART ACTIONS TOOLBAR
+     ===================================================================== */
+  .chart-actions-toolbar {
+    display: flex;
+    gap: 8px;
+    margin: 0 24px 16px 24px;
+    flex-wrap: wrap;
+  }
+  .chart-action-btn {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    color: #7f9bb4;
+    padding: 6px 12px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .chart-action-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #eef4f8;
+  }
+  .chart-action-btn:active {
+    transform: translateY(1px);
   }
