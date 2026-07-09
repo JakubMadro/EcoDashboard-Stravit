@@ -411,7 +411,7 @@ def app(environ, start_response):
                         recent.append({
                             "name": ent.get("name", ""),
                             "sport": ent.get("type", ent.get("sport", "")),
-                            "date": ent.get("dateStr", ""),
+                            "date": ent.get("dateRaw", ent.get("dateStr", "")),
                             "dist": ent.get("dist", 0.0),
                             "timeSec": ent.get("timeSec", 0),
                             "pts": ent.get("pts", 0.0),
@@ -431,7 +431,7 @@ def app(environ, start_response):
                             recent.append({
                                 "name": ent.get("name", ""),
                                 "sport": ent.get("type", ent.get("sport", "")),
-                                "date": ent.get("dateStr", ""),
+                                "date": ent.get("dateRaw", ent.get("dateStr", "")),
                                 "dist": ent.get("dist", 0.0),
                                 "timeSec": ent.get("timeSec", 0),
                                 "pts": ent.get("pts", 0.0),

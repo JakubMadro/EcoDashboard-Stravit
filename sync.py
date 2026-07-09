@@ -353,16 +353,17 @@ def run_sync_job_execution(slug, full_import=False, trigger_type="periodic"):
 def background_worker(slug):
     last_periodic_sync = time.time()
     
-    # Auto cold-start helper on server startup
+    # Auto cold-start helper on server startup only if database is completely empty
     try:
         logger.info(f"Wątek tła (Sync Daemon): Sprawdzanie stanu bazy dla {slug}...")
         existing = load_activities(slug)
         if not existing:
+            logger.info("Baza danych jest pusta. Inicjowanie pełnego importu początkowego...")
             run_sync_job_execution(slug, full_import=True, trigger_type="periodic")
         else:
-            run_sync_job_execution(slug, full_import=False, trigger_type="periodic")
+            logger.info(f"Baza danych zawiera już {len(existing)} treningów. Pomijanie synchronizacji startowej.")
     except Exception as e:
-        logger.error(f"Sync Daemon: Initial cold start sync failed: {e}")
+        logger.error(f"Sync Daemon: Initial cold start check failed: {e}")
 
     while True:
         try:
@@ -376,9 +377,27 @@ def background_worker(slug):
             
             # Periodic sync every SYNC_RATE_LIMIT_SECONDS (defaults to 30 minutes)
             elif time.time() - last_periodic_sync >= SYNC_RATE_LIMIT_SECONDS:
-                logger.info("Wątek tła (Sync Daemon): Uruchamianie cyklicznej synchronizacji...")
-                run_sync_job_execution(slug, full_import=False, trigger_type="periodic")
-                last_periodic_sync = time.time()
+                # Check when the last job was run in Table Storage to coordinate multiple workers
+                last_run_str = job.get("completed_at") or job.get("started_at")
+                should_run = True
+                if last_run_str:
+                    try:
+                        import datetime
+                        last_run_dt = datetime.datetime.strptime(last_run_str, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc)
+                        now_utc = datetime.datetime.now(datetime.timezone.utc)
+                        elapsed = (now_utc - last_run_dt).total_seconds()
+                        if elapsed < SYNC_RATE_LIMIT_SECONDS:
+                            should_run = False
+                            # Re-align local worker timer with the actual last sync run
+                            last_periodic_sync = time.time() - (SYNC_RATE_LIMIT_SECONDS - elapsed)
+                            logger.info(f"Wątek tła (Sync Daemon): Pomijanie cyklicznej synchronizacji, ostatnia była {elapsed:.0f}s temu.")
+                    except Exception as le:
+                        logger.error(f"Sync Daemon: Blad parsowania czasu ostatniego uruchomienia: {le}")
+                
+                if should_run:
+                    logger.info("Wątek tła (Sync Daemon): Uruchamianie cyklicznej synchronizacji...")
+                    run_sync_job_execution(slug, full_import=False, trigger_type="periodic")
+                    last_periodic_sync = time.time()
         except Exception as e:
             logger.error(f"Wątek tła (Sync Daemon): Blad w petli glownej: {e}")
             
