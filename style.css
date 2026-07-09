@@ -1251,7 +1251,8 @@
   /* Elevate parent cards to prevent other cards stacking on top of active dropdowns */
   .glass-card:focus-within,
   .sidebar-section:focus-within,
-  .autocomplete-wrapper:focus-within {
+  .autocomplete-wrapper:focus-within,
+  .sidebar-section.has-open-suggestions {
     position: relative;
     z-index: 50 !important;
   }

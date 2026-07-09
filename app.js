@@ -267,7 +267,7 @@ async function refreshData(force = false) {
     if (ME_NAME && !crew.includes(ME_NAME)) {
       crew.unshift(ME_NAME);
     }
-    await saveCrew();
+    try { localStorage.setItem(getCrewStorageKey(), JSON.stringify(crew)); } catch(e){}
     renderAll();
   } catch(err) {
     if (status) { status.textContent = '✗ ' + err.message; status.style.color = 'var(--coral)'; }
@@ -563,6 +563,8 @@ function setupCustomAutocomplete(inputId, suggestionsId, getSourceFn, onSelect) 
     list.classList.remove('show');
     list.innerHTML = '';
     activeIndex = -1;
+    const section = input.closest('.sidebar-section');
+    if (section) section.classList.remove('has-open-suggestions');
   }
 
   async function showSuggestions(query) {
@@ -572,6 +574,9 @@ function setupCustomAutocomplete(inputId, suggestionsId, getSourceFn, onSelect) 
       closeSuggestions();
       return;
     }
+
+    const section = input.closest('.sidebar-section');
+    if (section) section.classList.add('has-open-suggestions');
 
     currentItems = source.filter(item => {
       const str = typeof item === 'object' && item !== null ? (item.me || item.name || '') : item;
@@ -1080,14 +1085,18 @@ async function addAthlete(){
   } catch(e) {}
 
   // Inicjalizacja autouzupełniania dla pól wyszukiwania
-  setupCustomAutocomplete('addInput', 'addSuggestions', ensureNamesLoaded);
+  setupCustomAutocomplete('addInput', 'addSuggestions', ensureNamesLoaded, () => {
+    document.getElementById('addBtn').click();
+  });
   setupCustomAutocomplete('profileInput', 'profileSuggestions', () => savedProfiles, async (profile) => {
     if (profile && profile.id) {
       await loadProfileById(profile.id);
       document.getElementById('profileInput').value = '';
     }
   });
-  setupCustomAutocomplete('meInput', 'meSuggestions', ensureNamesLoaded);
+  setupCustomAutocomplete('meInput', 'meSuggestions', ensureNamesLoaded, () => {
+    document.getElementById('createProfileBtn').click();
+  });
 
   // Załaduj dane (automatycznie pobierze profil w Promise.all)
   await refreshData(false);
