@@ -148,6 +148,14 @@
   .leaderboard-table th.active-sort {
     color: #ffd166 !important;
   }
+  .btn-strava {
+    transition: all 0.2s ease;
+  }
+  .btn-strava:hover {
+    background: rgba(252, 76, 2, 0.2) !important;
+    border-color: rgba(252, 76, 2, 0.6) !important;
+    box-shadow: 0 0 10px rgba(252, 76, 2, 0.2);
+  }
 </style>
 </head>
 <body>
@@ -514,11 +522,18 @@
           </td>
           <td>
             <div style="font-weight: 600; color: #eef4f8; font-size: 13px; margin-bottom: 4px;">"${act.title}"</div>
-            <div style="font-size: 11px; color: var(--text-muted);">
+            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">
               Dystans: <strong>${act.dist.toFixed(2)} km</strong> | 
               Czas: <strong>${formatTime(act.timeSec)}</strong> | 
               Punkty: <strong>${act.pts.toFixed(2)} pkt</strong>
             </div>
+            ${act.stravaUrl ? `
+              <div style="margin-top: 6px;">
+                <a href="${act.stravaUrl}" target="_blank" class="btn-strava" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; font-size: 11px; border-radius: 6px; background: rgba(252, 76, 2, 0.1); border: 1px solid rgba(252, 76, 2, 0.3); color: #fc4c02; font-weight: 600; text-decoration: none; transition: background 0.2s ease;">
+                  <span style="font-size: 12px; margin-top: -1px;">🧡</span> Otwórz w Strava
+                </a>
+              </div>
+            ` : ''}
           </td>
           <td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #7f9bb4;">
             ${speed > 0 ? `${speed.toFixed(1)} km/h` : '—'}
