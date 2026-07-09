@@ -22,7 +22,7 @@ if APPINSIGHTS_CONN_STR:
     except Exception as e:
         logger.warning(f"Failed to configure App Insights in app.py: {e}")
 
-from db import save_crew_data, load_crew_data, list_crew_profiles, load_activities
+from db import save_crew_data, load_crew_data, list_crew_profiles, load_activities, _get_table_client
 from sync import is_logged_in, login_to_stravit, sync_activities, start_background_sync, AuthRequired, STRAVIT_EMAIL, STRAVIT_PASSWORD, DEFAULT_SLUG
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -202,7 +202,24 @@ def _send_bytes(start_response, status, body, content_type="text/plain; charset=
     if "/api/" in content_type or "application/json" in content_type:
         response_headers.append(("Cache-Control", "no-store, no-cache, must-revalidate"))
         
-    start_response(f"{status} OK" if isinstance(status, int) else status, response_headers)
+    if isinstance(status, int):
+        phrases = {
+            200: "200 OK",
+            201: "201 Created",
+            202: "202 Accepted",
+            400: "400 Bad Request",
+            401: "401 Unauthorized",
+            403: "403 Forbidden",
+            404: "404 Not Found",
+            410: "410 Gone",
+            500: "500 Internal Server Error",
+            502: "502 Bad Gateway"
+        }
+        status_str = phrases.get(status, f"{status} Unknown")
+    else:
+        status_str = status
+        
+    start_response(status_str, response_headers)
     return [body]
 
 
