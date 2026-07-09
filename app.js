@@ -1223,7 +1223,7 @@ async function addAthlete(){
 
   // Podepnij przycisk odświeżania
   const btn = document.getElementById('refreshBtn');
-  if (btn) btn.onclick = () => refreshData(true);
+  if (btn) btn.onclick = () => refreshData(false);
 
   // Wczytaj z lokalnego cache przeglądarki dla natychmiastowego startu
   try {

@@ -346,6 +346,87 @@ def app(environ, start_response):
             except Exception as e:
                 return _send_json(start_response, 502, {"error": str(e)})
 
+        # Get log history of sync runs
+        match_logs = re.fullmatch(r"/challenge/([^/]+)/synclogs", api_path)
+        if match_logs and method == "GET":
+            slug = urllib.parse.unquote(match_logs.group(1))
+            try:
+                table_client = _get_table_client("synclogs")
+                if table_client:
+                    entities = list(table_client.query_entities(query_filter=f"PartitionKey eq '{slug}'"))
+                    entities.sort(key=lambda e: e.get("completed_at", ""), reverse=True)
+                    logs = []
+                    for ent in entities[:30]:
+                        logs.append({
+                            "started_at": ent.get("started_at", ""),
+                            "completed_at": ent.get("completed_at", ""),
+                            "status": ent.get("status", ""),
+                            "records_pulled": ent.get("records_pulled", 0),
+                            "error": ent.get("error", ""),
+                            "trigger_type": ent.get("trigger_type", ""),
+                        })
+                    return _send_json(start_response, 200, logs)
+                else:
+                    # Local fallback
+                    local_file = BASE_DIR / "data" / f"sync_logs_{slug}.jsonl"
+                    logs = []
+                    if local_file.exists():
+                        with open(local_file, "r", encoding="utf-8") as f:
+                            for line in f:
+                                if line.strip():
+                                    logs.append(json.loads(line.strip()))
+                        logs.reverse()
+                    return _send_json(start_response, 200, logs[:30])
+            except Exception as e:
+                return _send_json(start_response, 502, {"error": str(e)})
+
+        # Get last 20 workouts imported to storage account
+        match_recent = re.fullmatch(r"/challenge/([^/]+)/recent-imports", api_path)
+        if match_recent and method == "GET":
+            slug = urllib.parse.unquote(match_recent.group(1))
+            try:
+                table_client = _get_table_client("activities")
+                if table_client:
+                    entities = list(table_client.query_entities(query_filter=f"PartitionKey eq '{slug}'"))
+                    entities.sort(key=lambda e: e.metadata.get("timestamp") or e.get("dateRaw", ""), reverse=True)
+                    recent = []
+                    for ent in entities[:20]:
+                        recent.append({
+                            "name": ent.get("name", ""),
+                            "sport": ent.get("type", ent.get("sport", "")),
+                            "date": ent.get("dateStr", ""),
+                            "dist": ent.get("dist", 0.0),
+                            "timeSec": ent.get("timeSec", 0),
+                            "pts": ent.get("pts", 0.0),
+                            "title": ent.get("title", ""),
+                            "stravaUrl": ent.get("stravaUrl", ""),
+                            "imported_at": ent.metadata.get("timestamp").strftime("%Y-%m-%dT%H:%M:%SZ") if ent.metadata.get("timestamp") else ""
+                        })
+                    return _send_json(start_response, 200, recent)
+                else:
+                    # Local fallback
+                    local_file = BASE_DIR / "data" / f"activities_{slug}.json"
+                    if local_file.exists():
+                        data = json.loads(local_file.read_text(encoding="utf-8"))
+                        data.reverse()
+                        recent = []
+                        for ent in data[:20]:
+                            recent.append({
+                                "name": ent.get("name", ""),
+                                "sport": ent.get("type", ent.get("sport", "")),
+                                "date": ent.get("dateStr", ""),
+                                "dist": ent.get("dist", 0.0),
+                                "timeSec": ent.get("timeSec", 0),
+                                "pts": ent.get("pts", 0.0),
+                                "title": ent.get("title", ""),
+                                "stravaUrl": ent.get("stravaUrl", ""),
+                                "imported_at": ""
+                            })
+                        return _send_json(start_response, 200, recent)
+                    return _send_json(start_response, 200, [])
+            except Exception as e:
+                return _send_json(start_response, 502, {"error": str(e)})
+
         return _send_json(start_response, 404, {"error": "API Route Not Found"})
 
     # Reject deprecated old non-versioned /api/ endpoints to keep codebase clean
