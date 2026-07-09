@@ -125,6 +125,29 @@
     font-size: 16px;
     margin-right: 6px;
   }
+
+  .search-controls select option {
+    background-color: #0d1e31;
+    color: #eef4f8;
+  }
+
+  .leaderboard-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s ease;
+  }
+  .leaderboard-table th.sortable:hover {
+    color: #ffd166 !important;
+    background: rgba(255, 255, 255, 0.02);
+  }
+  .sort-icon {
+    font-size: 10px;
+    margin-left: 6px;
+    opacity: 0.6;
+  }
+  .leaderboard-table th.active-sort {
+    color: #ffd166 !important;
+  }
 </style>
 </head>
 <body>
@@ -209,11 +232,11 @@
         <table class="leaderboard-table" style="min-width: 900px;" id="suspectsTable">
           <thead>
             <tr>
-              <th style="width: 180px;">Zawodnik</th>
-              <th style="width: 130px;">Data</th>
-              <th style="width: 150px;">Sport</th>
+              <th id="th-name" class="sortable" onclick="sortTable('name')" style="width: 180px;">Zawodnik <span class="sort-icon">↕</span></th>
+              <th id="th-date" class="sortable active-sort" onclick="sortTable('date')" style="width: 130px;">Data <span class="sort-icon">▼</span></th>
+              <th id="th-sport" class="sortable" onclick="sortTable('sport')" style="width: 150px;">Sport <span class="sort-icon">↕</span></th>
               <th>Szczegóły aktywności</th>
-              <th style="width: 100px; text-align: right;">Wyliczenia</th>
+              <th id="th-speed" class="sortable" onclick="sortTable('speed')" style="width: 120px; text-align: right;">Wyliczenia <span class="sort-icon">↕</span></th>
               <th style="width: 320px;">⚠️ Powód oflagowania</th>
             </tr>
           </thead>
@@ -233,6 +256,36 @@
 <script>
   let allActivities = [];
   let flaggedActivities = [];
+  let currentSortCol = 'date';
+  let currentSortOrder = 'desc';
+
+  function sortTable(column) {
+    if (currentSortCol === column) {
+      currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+      currentSortCol = column;
+      currentSortOrder = column === 'date' || column === 'speed' ? 'desc' : 'asc';
+    }
+
+    const cols = ['name', 'date', 'sport', 'speed'];
+    cols.forEach(c => {
+      const th = document.getElementById(`th-${c}`);
+      if (th) {
+        th.classList.remove('active-sort');
+        const icon = th.querySelector('.sort-icon');
+        if (icon) icon.textContent = '↕';
+      }
+    });
+
+    const activeTh = document.getElementById(`th-${column}`);
+    if (activeTh) {
+      activeTh.classList.add('active-sort');
+      const icon = activeTh.querySelector('.sort-icon');
+      if (icon) icon.textContent = currentSortOrder === 'asc' ? '▲' : '▼';
+    }
+
+    filterTable();
+  }
   
   const SPORT_EMOJIS = {
     Run: '🏃', Walk: '🚶', Ride: '🚴', VirtualRide: '💻🚴', 
@@ -485,7 +538,7 @@
     const typeFilter = document.getElementById('typeFilter').value;
     const reasonFilter = document.getElementById('reasonFilter').value;
 
-    const filtered = flaggedActivities.filter(act => {
+    let filtered = flaggedActivities.filter(act => {
       const nameMatch = act.name.toLowerCase().includes(searchVal);
       const titleMatch = act.title.toLowerCase().includes(searchVal);
       const reasonMatch = act.reasons.some(r => r.text.toLowerCase().includes(searchVal));
@@ -495,6 +548,29 @@
       const matchesReason = reasonFilter === 'all' || act.reasons.some(r => r.type === reasonFilter);
 
       return matchesSearch && matchesType && matchesReason;
+    });
+
+    // Zastosuj wybrane sortowanie
+    filtered.sort((a, b) => {
+      let valA, valB;
+      if (currentSortCol === 'name') {
+        valA = a.name.toLowerCase();
+        valB = b.name.toLowerCase();
+        return currentSortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      } else if (currentSortCol === 'date') {
+        valA = new Date(a.dateRaw || a.dateStr);
+        valB = new Date(b.dateRaw || b.dateStr);
+        return currentSortOrder === 'asc' ? valA - valB : valB - valA;
+      } else if (currentSortCol === 'sport') {
+        valA = (SPORT_NAMES[a.type] || a.type).toLowerCase();
+        valB = (SPORT_NAMES[b.type] || b.type).toLowerCase();
+        return currentSortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      } else if (currentSortCol === 'speed') {
+        valA = a.dist > 0 && a.timeSec > 0 ? (a.dist / (a.timeSec / 3600)) : 0;
+        valB = b.dist > 0 && b.timeSec > 0 ? (b.dist / (b.timeSec / 3600)) : 0;
+        return currentSortOrder === 'asc' ? valA - valB : valB - valA;
+      }
+      return 0;
     });
 
     renderTable(filtered);
