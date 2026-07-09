@@ -324,10 +324,13 @@ def run_sync_job_execution(slug, full_import=False, trigger_type="periodic"):
     new_count = 0
     status_str = "failed"
     err_msg = ""
+    job_started = False
     try:
-        if not start_sync_job(slug):
+        is_periodic = (trigger_type == "periodic")
+        if not start_sync_job(slug, is_periodic=is_periodic):
             return
         
+        job_started = True
         logger.info(f"Sync Daemon: Rozpoczynanie synchronizacji (full_import={full_import}, trigger_type={trigger_type})...")
         new_count = sync_activities(slug, full_import=full_import)
         complete_sync_job(slug)
@@ -339,11 +342,12 @@ def run_sync_job_execution(slug, full_import=False, trigger_type="periodic"):
         complete_sync_job(slug, error=err_msg)
         status_str = "failed"
     finally:
-        completed_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        try:
-            write_sync_log(slug, started_at, completed_at, status_str, new_count, err_msg, trigger_type)
-        except Exception as le:
-            logger.error(f"Sync Daemon: Blad zapisu logu w bazie: {le}")
+        if job_started:
+            completed_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            try:
+                write_sync_log(slug, started_at, completed_at, status_str, new_count, err_msg, trigger_type)
+            except Exception as le:
+                logger.error(f"Sync Daemon: Blad zapisu logu w bazie: {le}")
 
 
 def background_worker(slug):

@@ -409,14 +409,19 @@ def request_sync_job(slug, full_import=False):
         return False
 
 
-def start_sync_job(slug):
+def start_sync_job(slug, is_periodic=False):
     table_client = _get_table_client("syncjobs")
     now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     if table_client:
         try:
             entity = table_client.get_entity(partition_key="sync_job", row_key=slug)
-            if entity.get("status") != "requested":
-                return False
+            curr_status = entity.get("status", "idle")
+            if is_periodic:
+                if curr_status not in ("idle", "failed"):
+                    return False
+            else:
+                if curr_status != "requested":
+                    return False
             entity["status"] = "running"
             entity["started_at"] = now_str
             table_client.update_entity(
@@ -435,8 +440,13 @@ def start_sync_job(slug):
         local_file = BASE_DIR / "data" / f"sync_job_{slug}.json"
         if local_file.exists():
             job_data = json.loads(local_file.read_text(encoding="utf-8"))
-            if job_data.get("status") != "requested":
-                return False
+            curr_status = job_data.get("status", "idle")
+            if is_periodic:
+                if curr_status not in ("idle", "failed"):
+                    return False
+            else:
+                if curr_status != "requested":
+                    return False
             job_data["status"] = "running"
             job_data["started_at"] = now_str
             local_file.write_text(json.dumps(job_data, ensure_ascii=False), encoding="utf-8")
