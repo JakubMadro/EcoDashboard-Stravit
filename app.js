@@ -189,7 +189,7 @@ async function loginToStravit(event) {
     password.value = '';
     setAuthPanelVisible(false);
     if (msg) msg.textContent = '';
-    await refreshData(false);
+    await refreshData(true, true);
   } catch(err) {
     if (msg) { msg.textContent = err.message; msg.style.color = 'var(--coral)'; }
   } finally {
@@ -242,13 +242,13 @@ async function triggerSyncAndPoll(fullImport = false) {
   });
 }
 
-async function refreshData(force = false) {
+async function refreshData(force = false, triggerScrape = false) {
   const btn = document.getElementById('refreshBtn');
   const status = document.getElementById('refreshStatus');
   if (btn) { btn.disabled = true; btn.textContent = '⟳ Pobieranie…'; }
   if (status) { status.textContent = ''; status.style.color = 'var(--muted)'; }
   try {
-    if (force) {
+    if (triggerScrape) {
       await triggerSyncAndPoll(false);
     }
 
@@ -1223,7 +1223,7 @@ async function addAthlete(){
 
   // Podepnij przycisk odświeżania
   const btn = document.getElementById('refreshBtn');
-  if (btn) btn.onclick = () => refreshData(false);
+  if (btn) btn.onclick = () => refreshData(true, false);
 
   // Wczytaj z lokalnego cache przeglądarki dla natychmiastowego startu
   try {
