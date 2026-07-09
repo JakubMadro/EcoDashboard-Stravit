@@ -314,8 +314,8 @@ if (!crewId) {
 }
 let profileId = localStorage.getItem('dashboard-profile-id') || '';
 let savedProfiles = [];
-const TYPE_LABELS = {Run:'Bieganie', Walk:'Marsz', Ride:'Kolarstwo', VirtualRide:'Kolarstwo (trenażer)', Hike:'Wędrówka', WeightTraining:'Siłownia', Swim:'Pływanie', Workout:'Trening', InlineSkate:'Rolki'};
-const TYPE_COLORS = {Run:'#ef476f', Walk:'#ffb700', Ride:'#2ec4b6', VirtualRide:'#0891a4', Hike:'#a78bfa', WeightTraining:'#f472b6', Swim:'#38bdf8', Workout:'#fb923c', InlineSkate:'#94a3b8'};
+const TYPE_LABELS = {Run:'Bieganie', Walk:'Marsz', Ride:'Kolarstwo', VirtualRide:'Kolarstwo (trenażer)', Hike:'Wędrówka', WeightTraining:'Siłownia', Swim:'Pływanie', Workout:'Trening', InlineSkate:'Rolki', Yoga:'Joga'};
+const TYPE_COLORS = {Run:'#ef476f', Walk:'#ffb700', Ride:'#2ec4b6', VirtualRide:'#0891a4', Hike:'#a78bfa', WeightTraining:'#f472b6', Swim:'#38bdf8', Workout:'#fb923c', InlineSkate:'#94a3b8', Yoga:'#10b981'};
 
 let crew = [];
 let charts = {};
@@ -774,6 +774,10 @@ function renderBarChart(){
   destroyChart('bar');
   const ctx = document.getElementById('barChart');
   const present = crew.filter(n=>DATA.users[n]).slice().sort((a,b)=>DATA.users[b].points-DATA.users[a].points);
+  const canvasWrap = ctx.parentElement;
+  if (canvasWrap) {
+    canvasWrap.style.height = Math.max(150, present.length * 36 + 40) + 'px';
+  }
   charts.bar = new Chart(ctx, {
     type:'bar',
     data:{
@@ -792,7 +796,7 @@ function renderBarChart(){
       plugins:{legend:{display:false}, tooltip:{callbacks:{label:(c)=>` ${c.raw.toFixed(1)} pkt`}}},
       scales:{
         x:{grid:{color:'#1c3a54'}, ticks:{color:'#7f9bb4', font:{family:'JetBrains Mono'}}},
-        y:{grid:{display:false}, ticks:{color:'#eef4f8', font:{family:'Inter', size:13}}}
+        y:{grid:{display:false}, ticks:{autoSkip:false, color:'#eef4f8', font:{family:'Inter', size:13}}}
       }
     }
   });
