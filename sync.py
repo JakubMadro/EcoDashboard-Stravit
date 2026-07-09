@@ -10,7 +10,7 @@ import http.cookiejar
 import html
 import threading
 import logging
-from db import make_activity_id, save_activities_batch, has_activity, load_activities
+from db import make_activity_id, save_activities_batch, has_activity, load_activities, get_sync_job_status, start_sync_job, complete_sync_job
 
 # Initialize structured logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -317,29 +317,54 @@ def sync_activities(slug, full_import=False):
     return len(new_activities)
 
 
+def run_sync_job_execution(slug, full_import=False):
+    try:
+        if not start_sync_job(slug):
+            return
+        
+        logger.info(f"Sync Daemon: Rozpoczynanie synchronizacji (full_import={full_import})...")
+        new_count = sync_activities(slug, full_import=full_import)
+        complete_sync_job(slug)
+        logger.info(f"Sync Daemon: Synchronizacja zakonczona sukcesem. Dodano {new_count} nowych treningow.")
+    except Exception as e:
+        err_msg = str(e)
+        logger.error(f"Sync Daemon: Blad podczas synchronizacji: {err_msg}")
+        complete_sync_job(slug, error=err_msg)
+
+
 def background_worker(slug):
-    # Auto cold-start helper
+    last_periodic_sync = time.time()
+    
+    # Auto cold-start helper on server startup
     try:
         logger.info(f"Wątek tła (Sync Daemon): Sprawdzanie stanu bazy dla {slug}...")
         existing = load_activities(slug)
         if not existing:
-            logger.info(f"Baza aktywności dla {slug} jest pusta. Inicjowanie pełnego importu początkowego...")
-            sync_activities(slug, full_import=True)
+            run_sync_job_execution(slug, full_import=True)
         else:
-            logger.info(f"Baza danych zawiera {len(existing)} aktywności. Uruchamianie szybkiej synchronizacji startowej...")
-            sync_activities(slug, full_import=False)
+            run_sync_job_execution(slug, full_import=False)
     except Exception as e:
-        logger.error(f"Błąd podczas synchronizacji początkowej wątku tła: {e}")
+        logger.error(f"Sync Daemon: Initial cold start sync failed: {e}")
 
     while True:
-        # Sleep first to avoid running immediately after cold start
-        time.sleep(900)
         try:
-            logger.info(f"Wątek tła (Sync Daemon): Rozpoczynanie cyklicznej synchronizacji dla {slug}...")
-            new_count = sync_activities(slug, full_import=False)
-            logger.info(f"Wątek tła (Sync Daemon): Synchronizacja zakończona. Dodano {new_count} nowych treningów.")
+            # Check for requested manual sync jobs
+            job = get_sync_job_status(slug)
+            if job and job.get("status") == "requested":
+                full_imp = job.get("full_import", False)
+                logger.info(f"Wątek tła (Sync Daemon): Wykryto zadanie synchronizacji manualnej (full_import={full_imp}). Uruchamianie...")
+                run_sync_job_execution(slug, full_import=full_imp)
+                last_periodic_sync = time.time()
+            
+            # Periodic sync every 15 minutes (900 seconds)
+            elif time.time() - last_periodic_sync >= 900:
+                logger.info("Wątek tła (Sync Daemon): Uruchamianie cyklicznej synchronizacji...")
+                run_sync_job_execution(slug, full_import=False)
+                last_periodic_sync = time.time()
         except Exception as e:
-            logger.error(f"Wątek tła (Sync Daemon): Błąd podczas synchronizacji cyklicznej: {e}")
+            logger.error(f"Wątek tła (Sync Daemon): Blad w petli glownej: {e}")
+            
+        time.sleep(10)
 
 
 def start_background_sync(slug):

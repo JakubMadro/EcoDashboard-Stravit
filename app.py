@@ -173,21 +173,9 @@ def load_challenge_data(slug, force=False, full_import=False):
     now = time.time()
     
     if force:
-        with _sync_lock:
-            # Enforce rate limit for normal syncs, bypass for admin full import
-            if not full_import and (now - _last_sync_time < SYNC_RATE_LIMIT_SECONDS):
-                logger.info(f"Sync rate limit active. Bypassing Stravit API hit. Elapsed: {now - _last_sync_time:.0f}s")
-            else:
-                try:
-                    logger.info(f"Manual Sync triggered. Full import: {full_import}.")
-                    sync_activities(slug, full_import=full_import)
-                    _last_sync_time = now
-                    # Clear cache to force database rebuild
-                    with _cache_lock:
-                        _cache.pop(slug, None)
-                except Exception as e:
-                    logger.error(f"Error during manual sync trigger: {e}")
-                    raise
+        # Clear cache to force database rebuild
+        with _cache_lock:
+            _cache.pop(slug, None)
 
     # Rebuild from Table Storage
     with _cache_lock:
@@ -328,6 +316,33 @@ def app(environ, start_response):
                 activities = load_challenge_data(slug, force=False)
                 names = sorted({act["name"] for act in activities}, key=lambda n: n.casefold())
                 return _send_json(start_response, 200, names)
+            except Exception as e:
+                return _send_json(start_response, 502, {"error": str(e)})
+
+        # Trigger asynchronous sync job in Table Storage
+        match_sync = re.fullmatch(r"/challenge/([^/]+)/sync", api_path)
+        if match_sync and method == "POST":
+            slug = urllib.parse.unquote(match_sync.group(1))
+            try:
+                length = int(environ.get("CONTENT_LENGTH", "0"))
+                raw = environ.get("wsgi.input", b"").read(length).decode("utf-8") if length else "{}"
+                payload = json.loads(raw or "{}")
+                full_imp = payload.get("full_import", False)
+                
+                from db import request_sync_job
+                success = request_sync_job(slug, full_import=full_imp)
+                return _send_json(start_response, 202, {"ok": success, "status": "requested"})
+            except Exception as e:
+                return _send_json(start_response, 400, {"error": str(e)})
+
+        # Get status of sync job
+        match_sync_status = re.fullmatch(r"/challenge/([^/]+)/sync/status", api_path)
+        if match_sync_status and method == "GET":
+            slug = urllib.parse.unquote(match_sync_status.group(1))
+            try:
+                from db import get_sync_job_status
+                status_info = get_sync_job_status(slug)
+                return _send_json(start_response, 200, status_info)
             except Exception as e:
                 return _send_json(start_response, 502, {"error": str(e)})
 

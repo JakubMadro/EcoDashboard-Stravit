@@ -197,12 +197,61 @@ async function loginToStravit(event) {
   }
 }
 
+async function triggerSyncAndPoll(fullImport = false) {
+  const status = document.getElementById('refreshStatus');
+  if (status) { status.textContent = '⟳ Wysyłanie żądania...'; status.style.color = 'var(--muted)'; }
+
+  const resp = await fetch(`/api/v1/challenge/${CHALLENGE_SLUG}/sync`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ full_import: fullImport })
+  });
+  if (!resp.ok) {
+    throw new Error(`Błąd HTTP ${resp.status}`);
+  }
+
+  return new Promise((resolve, reject) => {
+    let attempts = 0;
+    const interval = setInterval(async () => {
+      attempts++;
+      try {
+        const statusResp = await fetch(`/api/v1/challenge/${CHALLENGE_SLUG}/sync/status`);
+        if (!statusResp.ok) return;
+        const job = await statusResp.json();
+        
+        if (job.status === 'requested') {
+          if (status) status.textContent = '⟳ Oczekiwanie w kolejce...';
+        } else if (job.status === 'running') {
+          if (status) status.textContent = '⟳ Pobieranie ze Stravita...';
+        } else if (job.status === 'idle') {
+          clearInterval(interval);
+          resolve();
+        } else if (job.status === 'failed') {
+          clearInterval(interval);
+          reject(new Error(job.error || 'Błąd synchronizacji'));
+        }
+      } catch (e) {
+        // Ignoruj przejściowe błędy sieciowe przy odpytywaniu
+      }
+      
+      if (attempts > 60) { // Limit 5 minut
+        clearInterval(interval);
+        reject(new Error('Przekroczono limit czasu synchronizacji (5 min)'));
+      }
+    }, 5000);
+  });
+}
+
 async function refreshData(force = false) {
   const btn = document.getElementById('refreshBtn');
   const status = document.getElementById('refreshStatus');
   if (btn) { btn.disabled = true; btn.textContent = '⟳ Pobieranie…'; }
   if (status) { status.textContent = ''; status.style.color = 'var(--muted)'; }
   try {
+    if (force) {
+      await triggerSyncAndPoll(false);
+    }
+
     const activeId = profileId || crewId;
 
     // Definiujemy obietnice dla równoległego pobierania
@@ -270,6 +319,9 @@ async function refreshData(force = false) {
     renderAll();
   } catch(err) {
     if (status) { status.textContent = '✗ ' + err.message; status.style.color = 'var(--coral)'; }
+    if (err.message.includes('Sesja Stravit') || err.message.includes('zaloguj') || err.message.includes('autoryz')) {
+      setAuthPanelVisible(true);
+    }
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '↻ Odśwież dane'; }
   }
