@@ -22,13 +22,13 @@ if APPINSIGHTS_CONN_STR:
     except Exception as e:
         logger.warning(f"Failed to configure App Insights in app.py: {e}")
 
-from db import save_crew_data, load_crew_data, list_crew_profiles, load_activities
+from db import save_crew_data, load_crew_data, list_crew_profiles, load_activities, _get_table_client
 from sync import is_logged_in, login_to_stravit, sync_activities, start_background_sync, AuthRequired, STRAVIT_EMAIL, STRAVIT_PASSWORD, DEFAULT_SLUG
 
 BASE_DIR = Path(__file__).resolve().parent
 
-# Configurable sync rate limiting (default 15 mins)
-SYNC_RATE_LIMIT_MINUTES = int(os.environ.get("SYNC_RATE_LIMIT_MINUTES", "15"))
+# Configurable sync rate limiting (default 30 mins)
+SYNC_RATE_LIMIT_MINUTES = int(os.environ.get("SYNC_RATE_LIMIT_MINUTES", "30"))
 SYNC_RATE_LIMIT_SECONDS = SYNC_RATE_LIMIT_MINUTES * 60
 
 # Cache configurations
@@ -173,21 +173,9 @@ def load_challenge_data(slug, force=False, full_import=False):
     now = time.time()
     
     if force:
-        with _sync_lock:
-            # Enforce rate limit for normal syncs, bypass for admin full import
-            if not full_import and (now - _last_sync_time < SYNC_RATE_LIMIT_SECONDS):
-                logger.info(f"Sync rate limit active. Bypassing Stravit API hit. Elapsed: {now - _last_sync_time:.0f}s")
-            else:
-                try:
-                    logger.info(f"Manual Sync triggered. Full import: {full_import}.")
-                    sync_activities(slug, full_import=full_import)
-                    _last_sync_time = now
-                    # Clear cache to force database rebuild
-                    with _cache_lock:
-                        _cache.pop(slug, None)
-                except Exception as e:
-                    logger.error(f"Error during manual sync trigger: {e}")
-                    raise
+        # Clear cache to force database rebuild
+        with _cache_lock:
+            _cache.pop(slug, None)
 
     # Rebuild from Table Storage
     with _cache_lock:
@@ -214,7 +202,24 @@ def _send_bytes(start_response, status, body, content_type="text/plain; charset=
     if "/api/" in content_type or "application/json" in content_type:
         response_headers.append(("Cache-Control", "no-store, no-cache, must-revalidate"))
         
-    start_response(f"{status} OK" if isinstance(status, int) else status, response_headers)
+    if isinstance(status, int):
+        phrases = {
+            200: "200 OK",
+            201: "201 Created",
+            202: "202 Accepted",
+            400: "400 Bad Request",
+            401: "401 Unauthorized",
+            403: "403 Forbidden",
+            404: "404 Not Found",
+            410: "410 Gone",
+            500: "500 Internal Server Error",
+            502: "502 Bad Gateway"
+        }
+        status_str = phrases.get(status, f"{status} Unknown")
+    else:
+        status_str = status
+        
+    start_response(status_str, response_headers)
     return [body]
 
 
@@ -328,6 +333,114 @@ def app(environ, start_response):
                 activities = load_challenge_data(slug, force=False)
                 names = sorted({act["name"] for act in activities}, key=lambda n: n.casefold())
                 return _send_json(start_response, 200, names)
+            except Exception as e:
+                return _send_json(start_response, 502, {"error": str(e)})
+
+        # Trigger asynchronous sync job in Table Storage
+        match_sync = re.fullmatch(r"/challenge/([^/]+)/sync", api_path)
+        if match_sync and method == "POST":
+            slug = urllib.parse.unquote(match_sync.group(1))
+            try:
+                length = int(environ.get("CONTENT_LENGTH", "0"))
+                raw = environ.get("wsgi.input", b"").read(length).decode("utf-8") if length else "{}"
+                payload = json.loads(raw or "{}")
+                full_imp = payload.get("full_import", False)
+                
+                from db import request_sync_job
+                success = request_sync_job(slug, full_import=full_imp)
+                return _send_json(start_response, 202, {"ok": success, "status": "requested"})
+            except Exception as e:
+                return _send_json(start_response, 400, {"error": str(e)})
+
+        # Get status of sync job
+        match_sync_status = re.fullmatch(r"/challenge/([^/]+)/sync/status", api_path)
+        if match_sync_status and method == "GET":
+            slug = urllib.parse.unquote(match_sync_status.group(1))
+            try:
+                from db import get_sync_job_status
+                status_info = get_sync_job_status(slug)
+                return _send_json(start_response, 200, status_info)
+            except Exception as e:
+                return _send_json(start_response, 502, {"error": str(e)})
+
+        # Get log history of sync runs
+        match_logs = re.fullmatch(r"/challenge/([^/]+)/synclogs", api_path)
+        if match_logs and method == "GET":
+            slug = urllib.parse.unquote(match_logs.group(1))
+            try:
+                table_client = _get_table_client("synclogs")
+                if table_client:
+                    entities = list(table_client.query_entities(query_filter=f"PartitionKey eq '{slug}'"))
+                    entities.sort(key=lambda e: e.get("completed_at", ""), reverse=True)
+                    logs = []
+                    for ent in entities[:30]:
+                        logs.append({
+                            "started_at": ent.get("started_at", ""),
+                            "completed_at": ent.get("completed_at", ""),
+                            "status": ent.get("status", ""),
+                            "records_pulled": ent.get("records_pulled", 0),
+                            "error": ent.get("error", ""),
+                            "trigger_type": ent.get("trigger_type", ""),
+                        })
+                    return _send_json(start_response, 200, logs)
+                else:
+                    # Local fallback
+                    local_file = BASE_DIR / "data" / f"sync_logs_{slug}.jsonl"
+                    logs = []
+                    if local_file.exists():
+                        with open(local_file, "r", encoding="utf-8") as f:
+                            for line in f:
+                                if line.strip():
+                                    logs.append(json.loads(line.strip()))
+                        logs.reverse()
+                    return _send_json(start_response, 200, logs[:30])
+            except Exception as e:
+                return _send_json(start_response, 502, {"error": str(e)})
+
+        # Get last 20 workouts imported to storage account
+        match_recent = re.fullmatch(r"/challenge/([^/]+)/recent-imports", api_path)
+        if match_recent and method == "GET":
+            slug = urllib.parse.unquote(match_recent.group(1))
+            try:
+                table_client = _get_table_client("activities")
+                if table_client:
+                    entities = list(table_client.query_entities(query_filter=f"PartitionKey eq '{slug}'"))
+                    entities.sort(key=lambda e: e.metadata.get("timestamp") or e.get("dateRaw", ""), reverse=True)
+                    recent = []
+                    for ent in entities[:20]:
+                        recent.append({
+                            "name": ent.get("name", ""),
+                            "sport": ent.get("type", ent.get("sport", "")),
+                            "date": ent.get("dateRaw", ent.get("dateStr", "")),
+                            "dist": ent.get("dist", 0.0),
+                            "timeSec": ent.get("timeSec", 0),
+                            "pts": ent.get("pts", 0.0),
+                            "title": ent.get("title", ""),
+                            "stravaUrl": ent.get("stravaUrl", ""),
+                            "imported_at": ent.metadata.get("timestamp").strftime("%Y-%m-%dT%H:%M:%SZ") if ent.metadata.get("timestamp") else ""
+                        })
+                    return _send_json(start_response, 200, recent)
+                else:
+                    # Local fallback
+                    local_file = BASE_DIR / "data" / f"activities_{slug}.json"
+                    if local_file.exists():
+                        data = json.loads(local_file.read_text(encoding="utf-8"))
+                        data.reverse()
+                        recent = []
+                        for ent in data[:20]:
+                            recent.append({
+                                "name": ent.get("name", ""),
+                                "sport": ent.get("type", ent.get("sport", "")),
+                                "date": ent.get("dateRaw", ent.get("dateStr", "")),
+                                "dist": ent.get("dist", 0.0),
+                                "timeSec": ent.get("timeSec", 0),
+                                "pts": ent.get("pts", 0.0),
+                                "title": ent.get("title", ""),
+                                "stravaUrl": ent.get("stravaUrl", ""),
+                                "imported_at": ""
+                            })
+                        return _send_json(start_response, 200, recent)
+                    return _send_json(start_response, 200, [])
             except Exception as e:
                 return _send_json(start_response, 502, {"error": str(e)})
 

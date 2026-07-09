@@ -189,7 +189,7 @@ async function loginToStravit(event) {
     password.value = '';
     setAuthPanelVisible(false);
     if (msg) msg.textContent = '';
-    await refreshData(false);
+    await refreshData(true, false);
   } catch(err) {
     if (msg) { msg.textContent = err.message; msg.style.color = 'var(--coral)'; }
   } finally {
@@ -197,12 +197,61 @@ async function loginToStravit(event) {
   }
 }
 
-async function refreshData(force = false) {
+async function triggerSyncAndPoll(fullImport = false) {
+  const status = document.getElementById('refreshStatus');
+  if (status) { status.textContent = '⟳ Wysyłanie żądania...'; status.style.color = 'var(--muted)'; }
+
+  const resp = await fetch(`/api/v1/challenge/${CHALLENGE_SLUG}/sync`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ full_import: fullImport })
+  });
+  if (!resp.ok) {
+    throw new Error(`Błąd HTTP ${resp.status}`);
+  }
+
+  return new Promise((resolve, reject) => {
+    let attempts = 0;
+    const interval = setInterval(async () => {
+      attempts++;
+      try {
+        const statusResp = await fetch(`/api/v1/challenge/${CHALLENGE_SLUG}/sync/status`);
+        if (!statusResp.ok) return;
+        const job = await statusResp.json();
+        
+        if (job.status === 'requested') {
+          if (status) status.textContent = '⟳ Oczekiwanie w kolejce...';
+        } else if (job.status === 'running') {
+          if (status) status.textContent = '⟳ Pobieranie ze Stravita...';
+        } else if (job.status === 'idle') {
+          clearInterval(interval);
+          resolve();
+        } else if (job.status === 'failed') {
+          clearInterval(interval);
+          reject(new Error(job.error || 'Błąd synchronizacji'));
+        }
+      } catch (e) {
+        // Ignoruj przejściowe błędy sieciowe przy odpytywaniu
+      }
+      
+      if (attempts > 60) { // Limit 5 minut
+        clearInterval(interval);
+        reject(new Error('Przekroczono limit czasu synchronizacji (5 min)'));
+      }
+    }, 5000);
+  });
+}
+
+async function refreshData(force = false, triggerScrape = false) {
   const btn = document.getElementById('refreshBtn');
   const status = document.getElementById('refreshStatus');
   if (btn) { btn.disabled = true; btn.textContent = '⟳ Pobieranie…'; }
   if (status) { status.textContent = ''; status.style.color = 'var(--muted)'; }
   try {
+    if (triggerScrape) {
+      await triggerSyncAndPoll(false);
+    }
+
     const activeId = profileId || crewId;
 
     // Definiujemy obietnice dla równoległego pobierania
@@ -263,7 +312,6 @@ async function refreshData(force = false) {
     renderProfileControls();
 
     loadCrew();
-    crew = crew.filter(n => DATA.users[n]);
     if (ME_NAME && !crew.includes(ME_NAME)) {
       crew.unshift(ME_NAME);
     }
@@ -271,6 +319,9 @@ async function refreshData(force = false) {
     renderAll();
   } catch(err) {
     if (status) { status.textContent = '✗ ' + err.message; status.style.color = 'var(--coral)'; }
+    if (err.message.includes('Sesja Stravit') || err.message.includes('zaloguj') || err.message.includes('autoryz')) {
+      setAuthPanelVisible(true);
+    }
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '↻ Odśwież dane'; }
   }
@@ -386,8 +437,8 @@ function applyProfile(profile, triggerApiRefresh = true){
   localStorage.setItem('dashboard-recent-profile-ids', JSON.stringify(recents));
 
   const members = Array.isArray(profile.members) ? profile.members.filter(Boolean) : [];
-  crew = members.filter(n => DATA?.users?.[n]);
-  if (ME_NAME && !crew.includes(ME_NAME) && DATA?.users?.[ME_NAME]) {
+  crew = members;
+  if (ME_NAME && !crew.includes(ME_NAME)) {
     crew.unshift(ME_NAME);
   }
   localStorage.setItem(getCrewStorageKey(), JSON.stringify(crew));
@@ -477,11 +528,11 @@ function loadCrew(){
     const raw = localStorage.getItem(getCrewStorageKey());
     if(raw){
       const arr = JSON.parse(raw);
-      if(Array.isArray(arr) && arr.length){ crew = arr.filter(n => DATA?.users?.[n]); return; }
+      if(Array.isArray(arr) && arr.length){ crew = arr; return; }
     }
   }catch(e){}
   crew = [];
-  if (ME_NAME && DATA?.users?.[ME_NAME]) {
+  if (ME_NAME) {
     crew.push(ME_NAME);
   }
 }
@@ -909,6 +960,16 @@ function renderRecentActivities() {
     return;
   }
 
+  const crewLower = crew.map(n => n.toLowerCase());
+  const filteredActivities = DATA.recentActivities.filter(act => 
+    crewLower.includes(act.name.toLowerCase())
+  );
+
+  if (filteredActivities.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:24px; color:var(--text-muted);">Brak ostatnich treningów dla wybranej ekipy.</td></tr>';
+    return;
+  }
+
   const SPORT_EMOJIS = {
     Run: '🏃', Walk: '🚶', Ride: '🚴', VirtualRide: '💻🚴', 
     Hike: '🥾', WeightTraining: '🏋️', Swim: '🏊', 
@@ -927,7 +988,7 @@ function renderRecentActivities() {
     return h > 0 ? `${h}h ${m}m` : `${m}m`;
   }
 
-  tbody.innerHTML = DATA.recentActivities.map(act => {
+  tbody.innerHTML = filteredActivities.map(act => {
     const displaySport = SPORT_NAMES[act.type] || act.type;
     const emoji = SPORT_EMOJIS[act.type] || '❓';
     const dateFormatted = act.dateRaw ? act.dateRaw.substring(5, 16) : act.dateStr;
@@ -968,11 +1029,19 @@ function renderCrewLeaderboard() {
     return;
   }
 
-  const crewList = Object.keys(DATA.users).map(name => ({
-    name: name,
-    points: DATA.users[name].points,
-    generalRank: DATA.users[name].rank
-  }));
+  const crewLower = crew.map(n => n.toLowerCase());
+  const crewList = Object.keys(DATA.users)
+    .filter(name => crewLower.includes(name.toLowerCase()))
+    .map(name => ({
+      name: name,
+      points: DATA.users[name].points,
+      generalRank: DATA.users[name].rank
+    }));
+
+  if (crewList.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:24px; color:var(--text-muted);">Brak danych o członkach ekipy. Dodaj zawodnika w panelu bocznym!</td></tr>';
+    return;
+  }
 
   crewList.sort((a, b) => b.points - a.points);
 
@@ -1154,7 +1223,7 @@ async function addAthlete(){
 
   // Podepnij przycisk odświeżania
   const btn = document.getElementById('refreshBtn');
-  if (btn) btn.onclick = () => refreshData(true);
+  if (btn) btn.onclick = () => refreshData(true, false);
 
   // Wczytaj z lokalnego cache przeglądarki dla natychmiastowego startu
   try {

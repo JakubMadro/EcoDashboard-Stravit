@@ -12,7 +12,8 @@ AZURE_STORAGE_CONN_STR = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
 PROFILE_INDEX_BLOB = "profiles_index.json"
 
 try:
-    from azure.data.tables import TableClient
+    from azure.data.tables import TableClient, UpdateMode
+    from azure.core import MatchConditions
     HAS_AZURE = True
 except ImportError:
     HAS_AZURE = False
@@ -345,3 +346,180 @@ def has_activity(slug, activity_id):
     except Exception:
         pass
     return False
+
+
+def get_sync_job_status(slug):
+    table_client = _get_table_client("syncjobs")
+    if table_client:
+        try:
+            entity = table_client.get_entity(partition_key="sync_job", row_key=slug)
+            return {
+                "status": entity.get("status", "idle"),
+                "full_import": entity.get("full_import", False),
+                "error": entity.get("error", ""),
+                "requested_at": entity.get("requested_at", ""),
+                "started_at": entity.get("started_at", ""),
+                "completed_at": entity.get("completed_at", ""),
+            }
+        except Exception:
+            pass
+
+    # Local fallback
+    try:
+        local_file = BASE_DIR / "data" / f"sync_job_{slug}.json"
+        if local_file.exists():
+            return json.loads(local_file.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return {"status": "idle", "full_import": False, "error": ""}
+
+
+def request_sync_job(slug, full_import=False):
+    table_client = _get_table_client("syncjobs")
+    now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    if table_client:
+        try:
+            entity = {
+                "PartitionKey": "sync_job",
+                "RowKey": slug,
+                "status": "requested",
+                "full_import": full_import,
+                "error": "",
+                "requested_at": now_str,
+            }
+            table_client.upsert_entity(entity)
+            return True
+        except Exception as e:
+            logger.error(f"DB: Blad zapisu sync job do Azure: {e}")
+
+    # Local fallback
+    try:
+        local_file = BASE_DIR / "data" / f"sync_job_{slug}.json"
+        local_file.parent.mkdir(parents=True, exist_ok=True)
+        job_data = {
+            "status": "requested",
+            "full_import": full_import,
+            "error": "",
+            "requested_at": now_str,
+        }
+        local_file.write_text(json.dumps(job_data, ensure_ascii=False), encoding="utf-8")
+        return True
+    except Exception as e:
+        logger.error(f"DB: Blad zapisu sync job lokalnie: {e}")
+        return False
+
+
+def start_sync_job(slug, is_periodic=False):
+    table_client = _get_table_client("syncjobs")
+    now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    if table_client:
+        try:
+            entity = table_client.get_entity(partition_key="sync_job", row_key=slug)
+            curr_status = entity.get("status", "idle")
+            if is_periodic:
+                if curr_status not in ("idle", "failed"):
+                    return False
+            else:
+                if curr_status != "requested":
+                    return False
+            entity["status"] = "running"
+            entity["started_at"] = now_str
+            table_client.update_entity(
+                entity, 
+                mode=UpdateMode.REPLACE, 
+                etag=entity.metadata.get("etag"), 
+                match_condition=MatchConditions.IfNotModified
+            )
+            return True
+        except Exception as e:
+            logger.error(f"DB: Blad start_sync_job: {e}")
+            return False
+
+    # Local fallback
+    try:
+        local_file = BASE_DIR / "data" / f"sync_job_{slug}.json"
+        if local_file.exists():
+            job_data = json.loads(local_file.read_text(encoding="utf-8"))
+            curr_status = job_data.get("status", "idle")
+            if is_periodic:
+                if curr_status not in ("idle", "failed"):
+                    return False
+            else:
+                if curr_status != "requested":
+                    return False
+            job_data["status"] = "running"
+            job_data["started_at"] = now_str
+            local_file.write_text(json.dumps(job_data, ensure_ascii=False), encoding="utf-8")
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def complete_sync_job(slug, error=None):
+    table_client = _get_table_client("syncjobs")
+    now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    if table_client:
+        try:
+            entity = table_client.get_entity(partition_key="sync_job", row_key=slug)
+            entity["status"] = "failed" if error else "idle"
+            entity["error"] = error or ""
+            entity["completed_at"] = now_str
+            table_client.update_entity(entity, mode=UpdateMode.REPLACE)
+            return True
+        except Exception as e:
+            logger.error(f"DB: Blad zakonczenia sync job w Azure: {e}")
+
+    # Local fallback
+    try:
+        local_file = BASE_DIR / "data" / f"sync_job_{slug}.json"
+        if local_file.exists():
+            job_data = json.loads(local_file.read_text(encoding="utf-8"))
+            job_data["status"] = "failed" if error else "idle"
+            job_data["error"] = error or ""
+            job_data["completed_at"] = now_str
+            local_file.write_text(json.dumps(job_data, ensure_ascii=False), encoding="utf-8")
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def write_sync_log(slug, started_at, completed_at, status, records_pulled, error_msg, trigger_type):
+    table_client = _get_table_client("synclogs")
+    row_key = completed_at.replace(":", "-")
+    if table_client:
+        try:
+            entity = {
+                "PartitionKey": slug,
+                "RowKey": row_key,
+                "started_at": started_at,
+                "completed_at": completed_at,
+                "status": status,
+                "records_pulled": int(records_pulled),
+                "error": error_msg or "",
+                "trigger_type": trigger_type,
+            }
+            table_client.upsert_entity(entity)
+            return True
+        except Exception as e:
+            logger.error(f"DB: Blad zapisu logu sync do Azure: {e}")
+
+    # Local fallback
+    try:
+        local_file = BASE_DIR / "data" / f"sync_logs_{slug}.jsonl"
+        local_file.parent.mkdir(parents=True, exist_ok=True)
+        log_entry = {
+            "started_at": started_at,
+            "completed_at": completed_at,
+            "status": status,
+            "records_pulled": int(records_pulled),
+            "error": error_msg or "",
+            "trigger_type": trigger_type,
+        }
+        with open(local_file, "a", encoding="utf-8") as f:
+            f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+        return True
+    except Exception as e:
+        logger.error(f"DB: Blad zapisu logu sync lokalnie: {e}")
+        return False

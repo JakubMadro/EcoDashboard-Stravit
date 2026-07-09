@@ -10,7 +10,7 @@ import http.cookiejar
 import html
 import threading
 import logging
-from db import make_activity_id, save_activities_batch, has_activity, load_activities
+from db import make_activity_id, save_activities_batch, has_activity, load_activities, get_sync_job_status, start_sync_job, complete_sync_job, write_sync_log
 
 # Initialize structured logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -18,6 +18,8 @@ logger = logging.getLogger("eco-dashboard.sync")
 
 BASE_URL = "https://mtupolska.stravit.app"
 DEFAULT_SLUG = "rywalizacja-sportowa"
+SYNC_RATE_LIMIT_MINUTES = int(os.environ.get("SYNC_RATE_LIMIT_MINUTES", "30"))
+SYNC_RATE_LIMIT_SECONDS = SYNC_RATE_LIMIT_MINUTES * 60
 
 STRAVIT_EMAIL = os.environ.get("STRAVIT_EMAIL")
 STRAVIT_PASSWORD = os.environ.get("STRAVIT_PASSWORD")
@@ -317,29 +319,89 @@ def sync_activities(slug, full_import=False):
     return len(new_activities)
 
 
+def run_sync_job_execution(slug, full_import=False, trigger_type="periodic"):
+    started_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    new_count = 0
+    status_str = "failed"
+    err_msg = ""
+    job_started = False
+    try:
+        is_periodic = (trigger_type == "periodic")
+        if not start_sync_job(slug, is_periodic=is_periodic):
+            return
+        
+        job_started = True
+        logger.info(f"Sync Daemon: Rozpoczynanie synchronizacji (full_import={full_import}, trigger_type={trigger_type})...")
+        new_count = sync_activities(slug, full_import=full_import)
+        complete_sync_job(slug)
+        status_str = "success"
+        logger.info(f"Sync Daemon: Synchronizacja zakonczona sukcesem. Dodano {new_count} nowych treningow.")
+    except Exception as e:
+        err_msg = str(e)
+        logger.error(f"Sync Daemon: Blad podczas synchronizacji: {err_msg}")
+        complete_sync_job(slug, error=err_msg)
+        status_str = "failed"
+    finally:
+        if job_started:
+            completed_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            try:
+                write_sync_log(slug, started_at, completed_at, status_str, new_count, err_msg, trigger_type)
+            except Exception as le:
+                logger.error(f"Sync Daemon: Blad zapisu logu w bazie: {le}")
+
+
 def background_worker(slug):
-    # Auto cold-start helper
+    last_periodic_sync = time.time()
+    
+    # Auto cold-start helper on server startup only if database is completely empty
     try:
         logger.info(f"Wątek tła (Sync Daemon): Sprawdzanie stanu bazy dla {slug}...")
         existing = load_activities(slug)
         if not existing:
-            logger.info(f"Baza aktywności dla {slug} jest pusta. Inicjowanie pełnego importu początkowego...")
-            sync_activities(slug, full_import=True)
+            logger.info("Baza danych jest pusta. Inicjowanie pełnego importu początkowego...")
+            run_sync_job_execution(slug, full_import=True, trigger_type="periodic")
         else:
-            logger.info(f"Baza danych zawiera {len(existing)} aktywności. Uruchamianie szybkiej synchronizacji startowej...")
-            sync_activities(slug, full_import=False)
+            logger.info(f"Baza danych zawiera już {len(existing)} treningów. Pomijanie synchronizacji startowej.")
     except Exception as e:
-        logger.error(f"Błąd podczas synchronizacji początkowej wątku tła: {e}")
+        logger.error(f"Sync Daemon: Initial cold start check failed: {e}")
 
     while True:
-        # Sleep first to avoid running immediately after cold start
-        time.sleep(900)
         try:
-            logger.info(f"Wątek tła (Sync Daemon): Rozpoczynanie cyklicznej synchronizacji dla {slug}...")
-            new_count = sync_activities(slug, full_import=False)
-            logger.info(f"Wątek tła (Sync Daemon): Synchronizacja zakończona. Dodano {new_count} nowych treningów.")
+            # Check for requested manual sync jobs
+            job = get_sync_job_status(slug)
+            if job and job.get("status") == "requested":
+                full_imp = job.get("full_import", False)
+                logger.info(f"Wątek tła (Sync Daemon): Wykryto zadanie synchronizacji manualnej (full_import={full_imp}). Uruchamianie...")
+                run_sync_job_execution(slug, full_import=full_imp, trigger_type="manual")
+                last_periodic_sync = time.time()
+            
+            # Periodic sync every SYNC_RATE_LIMIT_SECONDS (defaults to 30 minutes)
+            elif time.time() - last_periodic_sync >= SYNC_RATE_LIMIT_SECONDS:
+                # Check when the last job was run in Table Storage to coordinate multiple workers
+                last_run_str = job.get("completed_at") or job.get("started_at")
+                should_run = True
+                if last_run_str:
+                    try:
+                        import datetime
+                        last_run_dt = datetime.datetime.strptime(last_run_str, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc)
+                        now_utc = datetime.datetime.now(datetime.timezone.utc)
+                        elapsed = (now_utc - last_run_dt).total_seconds()
+                        if elapsed < SYNC_RATE_LIMIT_SECONDS:
+                            should_run = False
+                            # Re-align local worker timer with the actual last sync run
+                            last_periodic_sync = time.time() - (SYNC_RATE_LIMIT_SECONDS - elapsed)
+                            logger.info(f"Wątek tła (Sync Daemon): Pomijanie cyklicznej synchronizacji, ostatnia była {elapsed:.0f}s temu.")
+                    except Exception as le:
+                        logger.error(f"Sync Daemon: Blad parsowania czasu ostatniego uruchomienia: {le}")
+                
+                if should_run:
+                    logger.info("Wątek tła (Sync Daemon): Uruchamianie cyklicznej synchronizacji...")
+                    run_sync_job_execution(slug, full_import=False, trigger_type="periodic")
+                    last_periodic_sync = time.time()
         except Exception as e:
-            logger.error(f"Wątek tła (Sync Daemon): Błąd podczas synchronizacji cyklicznej: {e}")
+            logger.error(f"Wątek tła (Sync Daemon): Blad w petli glownej: {e}")
+            
+        time.sleep(10)
 
 
 def start_background_sync(slug):
