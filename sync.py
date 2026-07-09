@@ -220,18 +220,28 @@ def sync_activities(slug, full_import=False):
         save_activities_batch(slug, activities)
         return len(activities)
     
-    # Fast Incremental Sync (Stop on exist)
+    # Szybka synchronizacja przyrostowa na podstawie zbioru kluczy w pamięci
+    logger.info(f"Sync: Uruchomiono przyrostową synchronizację (In-Memory Key Check) dla wyzwania: {slug}")
+    try:
+        existing = load_activities(slug) or []
+    except Exception as e:
+        logger.error(f"Sync: Nie udało się pobrać istniejących aktywności do porównania: {e}")
+        existing = []
+
+    existing_keys = set()
+    for act in existing:
+        act_id = make_activity_id(act["name"], act.get("dateRaw", act["dateStr"]), act["title"], act["dist"], act["timeSec"])
+        existing_keys.add(act_id)
+
     new_activities = []
-    logger.info(f"Sync: Uruchomiono szybką synchronizację przyrostową (Fast Sync) dla wyzwania: {slug}")
     for act in activities:
         act_id = make_activity_id(act["name"], act.get("dateRaw", act["dateStr"]), act["title"], act["dist"], act["timeSec"])
-        if has_activity(slug, act_id):
-            break
-        new_activities.append(act)
+        if act_id not in existing_keys:
+            new_activities.append(act)
         
     if new_activities:
         logger.info(f"Sync: Znaleziono {len(new_activities)} nowych treningów do zaimportowania.")
-        # Reverse to save oldest to newest
+        # Odwróć listę, aby zapisywać od najstarszych do najnowszych
         reversed_new = list(reversed(new_activities))
         for act in reversed_new:
             logger.info(f"  -> IMPORT: {act['name']} - \"{act['title']}\" ({act['dist']} km, {act['pts']} pkt, {act['type']}, {act['dateStr']})")
