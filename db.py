@@ -13,6 +13,7 @@ PROFILE_INDEX_BLOB = "profiles_index.json"
 
 try:
     from azure.data.tables import TableClient, UpdateMode
+    from azure.core import MatchConditions
     HAS_AZURE = True
 except ImportError:
     HAS_AZURE = False
@@ -418,9 +419,15 @@ def start_sync_job(slug):
                 return False
             entity["status"] = "running"
             entity["started_at"] = now_str
-            table_client.update_entity(entity, mode=UpdateMode.REPLACE, etag=entity.metadata.get("etag"))
+            table_client.update_entity(
+                entity, 
+                mode=UpdateMode.REPLACE, 
+                etag=entity.metadata.get("etag"), 
+                match_condition=MatchConditions.IfNotModified
+            )
             return True
-        except Exception:
+        except Exception as e:
+            logger.error(f"DB: Blad start_sync_job: {e}")
             return False
 
     # Local fallback
