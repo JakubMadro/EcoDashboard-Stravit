@@ -10,7 +10,7 @@ import http.cookiejar
 import html
 import threading
 import logging
-from db import make_activity_id, save_activities_batch, has_activity, load_activities, get_sync_job_status, start_sync_job, complete_sync_job
+from db import make_activity_id, save_activities_batch, has_activity, load_activities, get_sync_job_status, start_sync_job, complete_sync_job, write_sync_log
 
 # Initialize structured logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -18,6 +18,8 @@ logger = logging.getLogger("eco-dashboard.sync")
 
 BASE_URL = "https://mtupolska.stravit.app"
 DEFAULT_SLUG = "rywalizacja-sportowa"
+SYNC_RATE_LIMIT_MINUTES = int(os.environ.get("SYNC_RATE_LIMIT_MINUTES", "30"))
+SYNC_RATE_LIMIT_SECONDS = SYNC_RATE_LIMIT_MINUTES * 60
 
 STRAVIT_EMAIL = os.environ.get("STRAVIT_EMAIL")
 STRAVIT_PASSWORD = os.environ.get("STRAVIT_PASSWORD")
@@ -317,19 +319,31 @@ def sync_activities(slug, full_import=False):
     return len(new_activities)
 
 
-def run_sync_job_execution(slug, full_import=False):
+def run_sync_job_execution(slug, full_import=False, trigger_type="periodic"):
+    started_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    new_count = 0
+    status_str = "failed"
+    err_msg = ""
     try:
         if not start_sync_job(slug):
             return
         
-        logger.info(f"Sync Daemon: Rozpoczynanie synchronizacji (full_import={full_import})...")
+        logger.info(f"Sync Daemon: Rozpoczynanie synchronizacji (full_import={full_import}, trigger_type={trigger_type})...")
         new_count = sync_activities(slug, full_import=full_import)
         complete_sync_job(slug)
+        status_str = "success"
         logger.info(f"Sync Daemon: Synchronizacja zakonczona sukcesem. Dodano {new_count} nowych treningow.")
     except Exception as e:
         err_msg = str(e)
         logger.error(f"Sync Daemon: Blad podczas synchronizacji: {err_msg}")
         complete_sync_job(slug, error=err_msg)
+        status_str = "failed"
+    finally:
+        completed_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        try:
+            write_sync_log(slug, started_at, completed_at, status_str, new_count, err_msg, trigger_type)
+        except Exception as le:
+            logger.error(f"Sync Daemon: Blad zapisu logu w bazie: {le}")
 
 
 def background_worker(slug):
@@ -340,9 +354,9 @@ def background_worker(slug):
         logger.info(f"Wątek tła (Sync Daemon): Sprawdzanie stanu bazy dla {slug}...")
         existing = load_activities(slug)
         if not existing:
-            run_sync_job_execution(slug, full_import=True)
+            run_sync_job_execution(slug, full_import=True, trigger_type="periodic")
         else:
-            run_sync_job_execution(slug, full_import=False)
+            run_sync_job_execution(slug, full_import=False, trigger_type="periodic")
     except Exception as e:
         logger.error(f"Sync Daemon: Initial cold start sync failed: {e}")
 
@@ -353,13 +367,13 @@ def background_worker(slug):
             if job and job.get("status") == "requested":
                 full_imp = job.get("full_import", False)
                 logger.info(f"Wątek tła (Sync Daemon): Wykryto zadanie synchronizacji manualnej (full_import={full_imp}). Uruchamianie...")
-                run_sync_job_execution(slug, full_import=full_imp)
+                run_sync_job_execution(slug, full_import=full_imp, trigger_type="manual")
                 last_periodic_sync = time.time()
             
-            # Periodic sync every 15 minutes (900 seconds)
-            elif time.time() - last_periodic_sync >= 900:
+            # Periodic sync every SYNC_RATE_LIMIT_SECONDS (defaults to 30 minutes)
+            elif time.time() - last_periodic_sync >= SYNC_RATE_LIMIT_SECONDS:
                 logger.info("Wątek tła (Sync Daemon): Uruchamianie cyklicznej synchronizacji...")
-                run_sync_job_execution(slug, full_import=False)
+                run_sync_job_execution(slug, full_import=False, trigger_type="periodic")
                 last_periodic_sync = time.time()
         except Exception as e:
             logger.error(f"Wątek tła (Sync Daemon): Blad w petli glownej: {e}")

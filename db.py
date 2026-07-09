@@ -473,3 +473,43 @@ def complete_sync_job(slug, error=None):
     except Exception:
         pass
     return False
+
+
+def write_sync_log(slug, started_at, completed_at, status, records_pulled, error_msg, trigger_type):
+    table_client = _get_table_client("synclogs")
+    row_key = completed_at.replace(":", "-")
+    if table_client:
+        try:
+            entity = {
+                "PartitionKey": slug,
+                "RowKey": row_key,
+                "started_at": started_at,
+                "completed_at": completed_at,
+                "status": status,
+                "records_pulled": int(records_pulled),
+                "error": error_msg or "",
+                "trigger_type": trigger_type,
+            }
+            table_client.upsert_entity(entity)
+            return True
+        except Exception as e:
+            logger.error(f"DB: Blad zapisu logu sync do Azure: {e}")
+
+    # Local fallback
+    try:
+        local_file = BASE_DIR / "data" / f"sync_logs_{slug}.jsonl"
+        local_file.parent.mkdir(parents=True, exist_ok=True)
+        log_entry = {
+            "started_at": started_at,
+            "completed_at": completed_at,
+            "status": status,
+            "records_pulled": int(records_pulled),
+            "error": error_msg or "",
+            "trigger_type": trigger_type,
+        }
+        with open(local_file, "a", encoding="utf-8") as f:
+            f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+        return True
+    except Exception as e:
+        logger.error(f"DB: Blad zapisu logu sync lokalnie: {e}")
+        return False

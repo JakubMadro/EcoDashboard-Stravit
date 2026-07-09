@@ -27,8 +27,8 @@ from sync import is_logged_in, login_to_stravit, sync_activities, start_backgrou
 
 BASE_DIR = Path(__file__).resolve().parent
 
-# Configurable sync rate limiting (default 15 mins)
-SYNC_RATE_LIMIT_MINUTES = int(os.environ.get("SYNC_RATE_LIMIT_MINUTES", "15"))
+# Configurable sync rate limiting (default 30 mins)
+SYNC_RATE_LIMIT_MINUTES = int(os.environ.get("SYNC_RATE_LIMIT_MINUTES", "30"))
 SYNC_RATE_LIMIT_SECONDS = SYNC_RATE_LIMIT_MINUTES * 60
 
 # Cache configurations
