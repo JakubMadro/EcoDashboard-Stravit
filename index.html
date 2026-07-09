@@ -140,6 +140,11 @@
               <span class="chart-subtitle">Łączna suma punktów w kolejnych dniach</span>
               <button class="expand-chart-btn" title="Pokaż na pełnym ekranie" onclick="openChartModal('cumulative')">⛶</button>
             </div>
+            <div class="chart-actions-toolbar">
+              <button onclick="toggleChartLegend('cumulative', true)" class="chart-action-btn">👁️ Pokaż wszystkich</button>
+              <button onclick="toggleChartLegend('cumulative', false)" class="chart-action-btn">🚫 Ukryj wszystkich</button>
+              <button onclick="toggleChartLegendSolo('cumulative')" class="chart-action-btn">👤 Tylko ja</button>
+            </div>
             <div class="chart-box tall"><canvas id="cumulativeChart"></canvas></div>
           </div>
           
@@ -157,6 +162,11 @@
               <h3>Dzienna forma</h3>
               <span class="chart-subtitle">Punkty zdobyte każdego dnia wyzwania</span>
               <button class="expand-chart-btn" title="Pokaż na pełnym ekranie" onclick="openChartModal('line')">⛶</button>
+            </div>
+            <div class="chart-actions-toolbar">
+              <button onclick="toggleChartLegend('line', true)" class="chart-action-btn">👁️ Pokaż wszystkich</button>
+              <button onclick="toggleChartLegend('line', false)" class="chart-action-btn">🚫 Ukryj wszystkich</button>
+              <button onclick="toggleChartLegendSolo('line')" class="chart-action-btn">👤 Tylko ja</button>
             </div>
             <div class="chart-box tall"><canvas id="lineChart"></canvas></div>
           </div>
@@ -185,13 +195,52 @@
         <section class="glass-card main-section">
           <div class="section-head">
             <span class="section-num">06</span>
-            <h2>Top 10 generalnej</h2>
+            <h2>Ostatnie 10 treningów</h2>
+            <span class="section-hint">ostatnie działania Twojej ekipy</span>
+          </div>
+          <div class="leaderboard-box">
+            <table>
+              <thead>
+                <tr>
+                  <th>Zawodnik</th>
+                  <th>Trening / Kiedy</th>
+                  <th style="text-align:right;">Wyniki</th>
+                  <th style="width:50px; text-align:center;">Strava</th>
+                </tr>
+              </thead>
+              <tbody id="recentActivitiesBody">
+                <tr><td colspan="4" style="text-align:center; padding: 24px; color: var(--text-muted);">Ładowanie danych...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <div class="main-bottom-grid" style="margin-top: 24px;">
+        <section class="glass-card main-section">
+          <div class="section-head">
+            <span class="section-num">07</span>
+            <h2>Klasyfikacja generalna</h2>
             <span class="section-hint">Twoja ekipa podświetlona</span>
           </div>
           <div class="leaderboard-box">
             <table>
               <thead><tr><th>#</th><th>Zawodnik</th><th style="text-align:right;">Punkty</th></tr></thead>
               <tbody id="top10Body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="glass-card main-section">
+          <div class="section-head">
+            <span class="section-num">08</span>
+            <h2>Klasyfikacja drużyny</h2>
+            <span class="section-hint">tylko członkowie Twojej ekipy</span>
+          </div>
+          <div class="leaderboard-box">
+            <table>
+              <thead><tr><th>#</th><th>Zawodnik</th><th style="text-align:right;">Punkty</th></tr></thead>
+              <tbody id="crewLeaderboardBody"></tbody>
             </table>
           </div>
         </section>

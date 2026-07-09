@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eco Challenge — Podejrzane Aktywności 🕵️‍♂️</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+<style>
+  :root {
+    --danger: #ef476f;
+    --danger-bg: rgba(239, 71, 111, 0.1);
+    --warning: #ffb700;
+    --warning-bg: rgba(255, 183, 0, 0.1);
+  }
+  
+  body {
+    background: radial-gradient(circle at 50% 0%, #152232 0%, #070e17 80%);
+  }
+
+  .admin-header {
+    border-bottom: 2px solid var(--danger);
+    box-shadow: 0 0 20px rgba(239, 71, 111, 0.15);
+  }
+
+  .badge-danger {
+    background: var(--danger-bg);
+    color: var(--danger);
+    border: 1px solid rgba(239, 71, 111, 0.3);
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .badge-warning {
+    background: var(--warning-bg);
+    color: var(--warning);
+    border: 1px solid rgba(255, 183, 0, 0.3);
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .admin-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+
+  @media (max-width: 768px) {
+    .admin-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .suspect-reason {
+    color: #ffd166;
+    font-weight: 600;
+    font-size: 12.5px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .suspect-row:hover {
+    background: rgba(239, 71, 111, 0.03) !important;
+  }
+
+  .top-suspect-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    margin-bottom: 8px;
+  }
+
+  .top-suspect-name {
+    font-weight: 600;
+    color: #eef4f8;
+  }
+
+  .top-suspect-count {
+    color: var(--danger);
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .search-controls {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .search-controls input, .search-controls select {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: #eef4f8;
+    padding: 10px 16px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+  }
+
+  .search-controls input {
+    flex-grow: 1;
+    min-width: 200px;
+  }
+
+  .empty-state {
+    padding: 48px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 16px;
+  }
+
+  .sport-icon {
+    font-size: 16px;
+    margin-right: 6px;
+  }
+
+  .search-controls select option {
+    background-color: #0d1e31;
+    color: #eef4f8;
+  }
+
+  .leaderboard-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s ease;
+  }
+  .leaderboard-table th.sortable:hover {
+    color: #ffd166 !important;
+    background: rgba(255, 255, 255, 0.02);
+  }
+  .sort-icon {
+    font-size: 10px;
+    margin-left: 6px;
+    opacity: 0.6;
+  }
+  .leaderboard-table th.active-sort {
+    color: #ffd166 !important;
+  }
+  .btn-strava {
+    transition: all 0.2s ease;
+  }
+  .btn-strava:hover {
+    background: rgba(252, 76, 2, 0.2) !important;
+    border-color: rgba(252, 76, 2, 0.6) !important;
+    box-shadow: 0 0 10px rgba(252, 76, 2, 0.2);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="track-lines-neon" style="background: linear-gradient(90deg, transparent, var(--danger), transparent); opacity: 0.3;"></div>
+  
+  <header class="dashboard-header glass-card admin-header">
+    <div class="title-block">
+      <div class="eyebrow" style="color: var(--danger);">Panel Administracyjny · Weryfikacja Danych</div>
+      <h1>Podejrzane Aktywności 🕵️‍♂️</h1>
+      <div class="subtitle" id="subtitleText">Ładowanie historii treningów z bazy...</div>
+    </div>
+    <div class="header-right">
+      <div class="header-actions">
+        <a href="/" class="btn" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #7f9bb4; text-decoration: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: 13px; text-align: center;">
+          ← Powrót do Dashboardu
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-layout" style="display: block;">
+    <!-- Metryki u góry panelu -->
+    <div class="admin-grid">
+      <div class="glass-card metric-card">
+        <span class="metric-label">Podejrzane aktywności</span>
+        <div class="metric-val" id="totalSuspectCount" style="color: var(--danger);">0</div>
+        <span class="metric-sub" id="totalPercent">0% wszystkich zapisanych treningów</span>
+      </div>
+      
+      <div class="glass-card metric-card">
+        <span class="metric-label">Najczęstszy powód</span>
+        <div class="metric-val" id="commonReason" style="font-size: 24px; white-space: normal; line-height: 1.3; height: auto; margin-top: 12px; color: var(--warning);">Brak</div>
+        <span class="metric-sub">anomalia najczęściej wykrywana</span>
+      </div>
+
+      <div class="glass-card">
+        <div style="padding: 16px 18px; border-bottom: 1px solid var(--border-color);">
+          <h3 style="margin: 0; font-size: 14px; font-weight: 700; color: #eef4f8;">Liderzy oflagowań (TOP 3)</h3>
+        </div>
+        <div style="padding: 14px 18px;" id="topSuspectsList">
+          <div style="color: var(--text-muted); font-size: 13px; text-align: center;">Ładowanie...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtry i Tabela -->
+    <section class="glass-card main-section">
+      <div class="section-head" style="margin-bottom: 20px;">
+        <span class="section-num" style="color: var(--danger);">01</span>
+        <h2>Lista podejrzanych treningów</h2>
+        <span class="section-hint">heurystyki wykrywania potencjalnych błędów lub prób oszukiwania</span>
+      </div>
+
+      <div class="search-controls">
+        <input type="text" id="searchInput" placeholder="Szukaj po zawodniku, tytule lub powodzie..." oninput="filterTable()">
+        
+        <select id="typeFilter" onchange="filterTable()">
+          <option value="all">Wszystkie sporty</option>
+          <option value="Run">Bieganie (Run)</option>
+          <option value="Walk">Marsz (Walk)</option>
+          <option value="Ride">Kolarstwo (Ride)</option>
+          <option value="VirtualRide">Wirtualna jazda (VirtualRide)</option>
+          <option value="Hike">Wędrówka (Hike)</option>
+          <option value="WeightTraining">Siłownia (WeightTraining)</option>
+          <option value="Swim">Pływanie (Swim)</option>
+          <option value="Workout">Trening (Workout)</option>
+          <option value="Yoga">Joga (Yoga)</option>
+          <option value="InlineSkate">Rolki (InlineSkate)</option>
+        </select>
+
+        <select id="reasonFilter" onchange="filterTable()">
+          <option value="all">Wszystkie powody</option>
+          <option value="duration">Za długi czas trwania</option>
+          <option value="speed">Nierealna prędkość</option>
+          <option value="distance">Nierealny dystans</option>
+          <option value="points">Ekstremalne punkty</option>
+        </select>
+      </div>
+
+      <div class="leaderboard-wrap" style="overflow-x: auto;">
+        <table class="leaderboard-table" style="min-width: 900px;" id="suspectsTable">
+          <thead>
+            <tr>
+              <th id="th-name" class="sortable" onclick="sortTable('name')" style="width: 180px;">Zawodnik <span class="sort-icon">↕</span></th>
+              <th id="th-date" class="sortable active-sort" onclick="sortTable('date')" style="width: 130px;">Data <span class="sort-icon">▼</span></th>
+              <th id="th-sport" class="sortable" onclick="sortTable('sport')" style="width: 150px;">Sport <span class="sort-icon">↕</span></th>
+              <th>Szczegóły aktywności</th>
+              <th id="th-speed" class="sortable" onclick="sortTable('speed')" style="width: 120px; text-align: right;">Wyliczenia <span class="sort-icon">↕</span></th>
+              <th style="width: 320px;">⚠️ Powód oflagowania</th>
+            </tr>
+          </thead>
+          <tbody id="suspectsBody">
+            <tr>
+              <td colspan="6" class="empty-state">Ładowanie danych z bazy...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer id="dashboardFooter" style="border-top: 1px solid rgba(239, 71, 111, 0.2);">PANEL ADMINISTRACYJNY DETEKCJI OSZUSTW</footer>
+</div>
+
+<script>
+  let allActivities = [];
+  let flaggedActivities = [];
+  let currentSortCol = 'date';
+  let currentSortOrder = 'desc';
+
+  function sortTable(column) {
+    if (currentSortCol === column) {
+      currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+      currentSortCol = column;
+      currentSortOrder = column === 'date' || column === 'speed' ? 'desc' : 'asc';
+    }
+
+    const cols = ['name', 'date', 'sport', 'speed'];
+    cols.forEach(c => {
+      const th = document.getElementById(`th-${c}`);
+      if (th) {
+        th.classList.remove('active-sort');
+        const icon = th.querySelector('.sort-icon');
+        if (icon) icon.textContent = '↕';
+      }
+    });
+
+    const activeTh = document.getElementById(`th-${column}`);
+    if (activeTh) {
+      activeTh.classList.add('active-sort');
+      const icon = activeTh.querySelector('.sort-icon');
+      if (icon) icon.textContent = currentSortOrder === 'asc' ? '▲' : '▼';
+    }
+
+    filterTable();
+  }
+  
+  const SPORT_EMOJIS = {
+    Run: '🏃', Walk: '🚶', Ride: '🚴', VirtualRide: '💻🚴', 
+    Hike: '🥾', WeightTraining: '🏋️', Swim: '🏊', 
+    Workout: '💪', InlineSkate: '🛼', Yoga: '🧘'
+  };
+
+  const SPORT_NAMES = {
+    Run: 'Bieganie', Walk: 'Marsz', Ride: 'Kolarstwo', VirtualRide: 'Kolarstwo (trenażer)', 
+    Hike: 'Wędrówka', WeightTraining: 'Siłownia', Swim: 'Pływanie', 
+    Workout: 'Trening', InlineSkate: 'Rolki', Yoga: 'Joga'
+  };
+
+  function formatTime(sec) {
+    const h = Math.floor(sec / 3600);
+    const m = Math.round((sec % 3600) / 60);
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  }
+
+  function checkSuspicious(act) {
+    const reasons = [];
+    const hours = act.timeSec / 3600;
+    const speed = act.dist > 0 && hours > 0 ? act.dist / hours : 0;
+    
+    // 1. Kryterium czasu trwania (zapomniane wyłączenie zegarka / nierealne długości treningów stacjonarnych)
+    if (act.type === 'WeightTraining' || act.type === 'Workout' || act.type === 'Yoga') {
+      if (hours > 4) {
+        reasons.push({
+          type: 'duration',
+          text: `Trening stacjonarny (${SPORT_NAMES[act.type] || act.type}) trwający ponad 4h (${hours.toFixed(1)}h)`
+        });
+      }
+    } else if (act.type === 'Swim') {
+      if (hours > 3) {
+        reasons.push({
+          type: 'duration',
+          text: `Pływanie trwające ponad 3h (${hours.toFixed(1)}h)`
+        });
+      }
+    } else {
+      if (hours > 8) {
+        reasons.push({
+          type: 'duration',
+          text: `Aktywność trwająca ponad 8h (${hours.toFixed(1)}h)`
+        });
+      }
+    }
+
+    // 2. Kryterium prędkości średniej
+    if (act.type === 'Run') {
+      if (speed > 22) {
+        reasons.push({
+          type: 'speed',
+          text: `Bieganie z prędkością > 22 km/h (${speed.toFixed(1)} km/h)`
+        });
+      }
+    } else if (act.type === 'Walk' || act.type === 'Hike') {
+      if (speed > 9) {
+        reasons.push({
+          type: 'speed',
+          text: `Marsz/Wędrówka o prędkości biegu (${speed.toFixed(1)} km/h)`
+        });
+      }
+    } else if (act.type === 'Ride' || act.type === 'VirtualRide') {
+      if (speed > 40) {
+        reasons.push({
+          type: 'speed',
+          text: `Kolarstwo ze średnią prędkością > 40 km/h (${speed.toFixed(1)} km/h)`
+        });
+      }
+    } else if (act.type === 'InlineSkate') {
+      if (speed > 35) {
+        reasons.push({
+          type: 'speed',
+          text: `Jazda na rolkach z prędkością > 35 km/h (${speed.toFixed(1)} km/h)`
+        });
+      }
+    }
+
+    // 3. Kryterium dystansu
+    if (act.type === 'Run' && act.dist > 80) {
+      reasons.push({
+        type: 'distance',
+        text: `Bieg na dystansie ponad 80 km (${act.dist.toFixed(1)} km)`
+      });
+    } else if ((act.type === 'Walk' || act.type === 'Hike') && act.dist > 40) {
+      reasons.push({
+        type: 'distance',
+        text: `Marsz/Wędrówka na dystansie ponad 40 km (${act.dist.toFixed(1)} km)`
+      });
+    } else if (act.type === 'Swim' && act.dist > 15) {
+      reasons.push({
+        type: 'distance',
+        text: `Pływanie na dystansie ponad 15 km (${act.dist.toFixed(1)} km)`
+      });
+    }
+
+    // 4. Kryterium punktacji
+    if (act.pts > 120) {
+      reasons.push({
+        type: 'points',
+        text: `Nierealna liczba punktów za pojedynczą aktywność (${act.pts.toFixed(1)} pkt)`
+      });
+    }
+
+    return reasons;
+  }
+
+  async function loadData() {
+    try {
+      const response = await fetch('/api/v1/challenge/rywalizacja-sportowa/activities');
+      if (!response.ok) throw new Error('Błąd serwera');
+      
+      const activities = await response.json();
+      allActivities = activities || [];
+      processActivities();
+    } catch(err) {
+      document.getElementById('subtitleText').textContent = 'Błąd pobierania danych!';
+      document.getElementById('suspectsBody').innerHTML = `<tr><td colspan="6" class="empty-state" style="color: var(--danger);">Błąd: Nie udało się pobrać treningów z bazy danych. (${err.message})</td></tr>`;
+    }
+  }
+
+  function processActivities() {
+    flaggedActivities = [];
+    
+    allActivities.forEach(act => {
+      const reasons = checkSuspicious(act);
+      if (reasons.length > 0) {
+        flaggedActivities.push({
+          ...act,
+          reasons: reasons
+        });
+      }
+    });
+
+    flaggedActivities.sort((a, b) => new Date(b.dateRaw || b.dateStr) - new Date(a.dateRaw || a.dateStr));
+
+    updateKPIs();
+    renderTable(flaggedActivities);
+    
+    document.getElementById('subtitleText').textContent = `Przeanalizowano ${allActivities.length} treningów`;
+  }
+
+  function updateKPIs() {
+    document.getElementById('totalSuspectCount').textContent = flaggedActivities.length;
+    
+    const pct = allActivities.length > 0 ? (flaggedActivities.length / allActivities.length * 100).toFixed(1) : '0';
+    document.getElementById('totalPercent').textContent = `${pct}% wszystkich zapisanych treningów`;
+
+    const reasonCounts = {};
+    flaggedActivities.forEach(act => {
+      act.reasons.forEach(r => {
+        reasonCounts[r.text] = (reasonCounts[r.text] || 0) + 1;
+      });
+    });
+
+    let topReason = 'Brak';
+    let maxCount = 0;
+    Object.keys(reasonCounts).forEach(text => {
+      if (reasonCounts[text] > maxCount) {
+        maxCount = reasonCounts[text];
+        topReason = text;
+      }
+    });
+    
+    document.getElementById('commonReason').textContent = topReason !== 'Brak' ? `${topReason} (${maxCount}x)` : 'Brak';
+
+    const userCounts = {};
+    flaggedActivities.forEach(act => {
+      userCounts[act.name] = (userCounts[act.name] || 0) + 1;
+    });
+
+    const sortedUsers = Object.keys(userCounts)
+      .map(name => ({ name, count: userCounts[name] }))
+      .sort((a, b) => b.count - a.count);
+
+    const topList = document.getElementById('topSuspectsList');
+    if (sortedUsers.length > 0) {
+      topList.innerHTML = sortedUsers.slice(0, 3).map(u => `
+        <div class="top-suspect-item">
+          <span class="top-suspect-name">${u.name}</span>
+          <span class="top-suspect-count">${u.count} wykroczeń</span>
+        </div>
+      `).join('');
+    } else {
+      topList.innerHTML = '<div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 10px;">Brak podejrzanych aktywności 🎉</div>';
+    }
+  }
+
+  function renderTable(data) {
+    const tbody = document.getElementById('suspectsBody');
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Brak aktywności spełniających kryteria podejrzeń. Czysto! 💎</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.map(act => {
+      const speed = act.dist > 0 && act.timeSec > 0 ? (act.dist / (act.timeSec / 3600)) : 0;
+      
+      const reasonsHtml = act.reasons.map(r => {
+        const isCritical = r.type === 'points' || r.type === 'speed';
+        const badgeClass = isCritical ? 'badge-danger' : 'badge-warning';
+        return `
+          <div style="margin-bottom: 6px;">
+            <span class="${badgeClass}">${r.type.toUpperCase()}</span>
+            <span>${r.text}</span>
+          </div>
+        `;
+      }).join('');
+
+      const displaySport = SPORT_NAMES[act.type] || act.type;
+      const emoji = SPORT_EMOJIS[act.type] || '❓';
+      const dateFormatted = act.dateRaw ? act.dateRaw.substring(0, 16) : act.dateStr;
+
+      return `
+        <tr class="suspect-row">
+          <td>
+            <div style="font-weight: 700; color: #eef4f8;">${act.name}</div>
+          </td>
+          <td style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #7f9bb4;">
+            ${dateFormatted}
+          </td>
+          <td>
+            <span class="sport-icon">${emoji}</span>
+            <span>${displaySport}</span>
+          </td>
+          <td>
+            <div style="font-weight: 600; color: #eef4f8; font-size: 13px; margin-bottom: 4px;">"${act.title}"</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">
+              Dystans: <strong>${act.dist.toFixed(2)} km</strong> | 
+              Czas: <strong>${formatTime(act.timeSec)}</strong> | 
+              Punkty: <strong>${act.pts.toFixed(2)} pkt</strong>
+            </div>
+            ${act.stravaUrl ? `
+              <div style="margin-top: 6px;">
+                <a href="${act.stravaUrl}" target="_blank" class="btn-strava" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; font-size: 11px; border-radius: 6px; background: rgba(252, 76, 2, 0.1); border: 1px solid rgba(252, 76, 2, 0.3); color: #fc4c02; font-weight: 600; text-decoration: none; transition: background 0.2s ease;">
+                  <span style="font-size: 12px; margin-top: -1px;">🧡</span> Otwórz w Strava
+                </a>
+              </div>
+            ` : ''}
+          </td>
+          <td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #7f9bb4;">
+            ${speed > 0 ? `${speed.toFixed(1)} km/h` : '—'}
+          </td>
+          <td>
+            <div class="suspect-reason">
+              ${reasonsHtml}
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function filterTable() {
+    const searchVal = document.getElementById('searchInput').value.toLowerCase();
+    const typeFilter = document.getElementById('typeFilter').value;
+    const reasonFilter = document.getElementById('reasonFilter').value;
+
+    let filtered = flaggedActivities.filter(act => {
+      const nameMatch = act.name.toLowerCase().includes(searchVal);
+      const titleMatch = act.title.toLowerCase().includes(searchVal);
+      const reasonMatch = act.reasons.some(r => r.text.toLowerCase().includes(searchVal));
+      const matchesSearch = nameMatch || titleMatch || reasonMatch;
+
+      const matchesType = typeFilter === 'all' || act.type === typeFilter;
+      const matchesReason = reasonFilter === 'all' || act.reasons.some(r => r.type === reasonFilter);
+
+      return matchesSearch && matchesType && matchesReason;
+    });
+
+    // Zastosuj wybrane sortowanie
+    filtered.sort((a, b) => {
+      let valA, valB;
+      if (currentSortCol === 'name') {
+        valA = a.name.toLowerCase();
+        valB = b.name.toLowerCase();
+        return currentSortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      } else if (currentSortCol === 'date') {
+        valA = new Date(a.dateRaw || a.dateStr);
+        valB = new Date(b.dateRaw || b.dateStr);
+        return currentSortOrder === 'asc' ? valA - valB : valB - valA;
+      } else if (currentSortCol === 'sport') {
+        valA = (SPORT_NAMES[a.type] || a.type).toLowerCase();
+        valB = (SPORT_NAMES[b.type] || b.type).toLowerCase();
+        return currentSortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      } else if (currentSortCol === 'speed') {
+        valA = a.dist > 0 && a.timeSec > 0 ? (a.dist / (a.timeSec / 3600)) : 0;
+        valB = b.dist > 0 && b.timeSec > 0 ? (b.dist / (b.timeSec / 3600)) : 0;
+        return currentSortOrder === 'asc' ? valA - valB : valB - valA;
+      }
+      return 0;
+    });
+
+    renderTable(filtered);
+  }
+
+  loadData();
+</script>
+</body>
+</html>

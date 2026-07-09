@@ -247,6 +247,8 @@ def save_activities_batch(slug, activities_list):
                     "dateStr": act["dateStr"],
                     "dateRaw": act.get("dateRaw", act["dateStr"]),
                 }
+                if "stravaUrl" in act and act["stravaUrl"]:
+                    entity["stravaUrl"] = act["stravaUrl"]
                 operations.append(("upsert", entity))
             try:
                 table_client.submit_transaction(operations)
@@ -304,6 +306,7 @@ def load_activities(slug):
                     "type": ent.get("type"),
                     "dateStr": ent.get("dateStr"),
                     "dateRaw": ent.get("dateRaw", ent.get("dateStr")),
+                    "stravaUrl": ent.get("stravaUrl"),
                 })
             return activities
         except Exception as e:

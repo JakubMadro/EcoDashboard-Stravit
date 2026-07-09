@@ -134,6 +134,27 @@ def build_data_from_activities(activities, crew_filter=None):
         key=lambda item: item["rank"],
     )[:10]
 
+    # Get recent activities of the filtered crew (or all if crew_set is None)
+    crew_acts = []
+    for act in activities:
+        name_lower = act["name"].lower()
+        if crew_set is None or name_lower in crew_set:
+            crew_acts.append({
+                "name": act["name"],
+                "title": act["title"],
+                "dist": float(act["dist"]),
+                "pts": float(act["pts"]),
+                "elev": float(act["elev"]),
+                "timeSec": int(act["timeSec"]),
+                "type": act["type"],
+                "dateStr": act["dateStr"],
+                "dateRaw": act.get("dateRaw", act["dateStr"]),
+                "stravaUrl": act.get("stravaUrl"),
+            })
+    
+    crew_acts.sort(key=lambda a: a.get("dateRaw", a["dateStr"]), reverse=True)
+    recent_acts = crew_acts[:10]
+
     return {
         "source": "stravit-database-nosql",
         "fetchedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -143,6 +164,7 @@ def build_data_from_activities(activities, crew_filter=None):
         "totals": totals,
         "topLeaders": top,
         "users": users,
+        "recentActivities": recent_acts,
     }
 
 
@@ -287,6 +309,16 @@ def app(environ, start_response):
                 return _send_json(start_response, 401, {"error": str(exc), "authRequired": True})
             except Exception as exc:
                 return _send_json(start_response, 502, {"error": str(exc)})
+
+        # Get raw activities list for admin validation
+        match_acts = re.fullmatch(r"/challenge/([^/]+)/activities", api_path)
+        if match_acts and method == "GET":
+            slug = urllib.parse.unquote(match_acts.group(1))
+            try:
+                activities = load_activities(slug) or []
+                return _send_json(start_response, 200, activities)
+            except Exception as e:
+                return _send_json(start_response, 502, {"error": str(e)})
 
         # Get sorted list of unique athlete names
         match_names = re.fullmatch(r"/challenge/([^/]+)/names", api_path)

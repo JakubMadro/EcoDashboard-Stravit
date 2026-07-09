@@ -198,6 +198,48 @@ def auto_login_if_configured():
                 logger.error(f"Automatyczne logowanie do Stravit nie powiodło się: {e}")
 
 
+def scrape_strava_urls(slug, num_pages=2):
+    strava_map = {}
+    for page in range(1, num_pages + 1):
+        try:
+            url = f"{BASE_URL}/challenge/{urllib.parse.quote(slug)}?page={page}"
+            html = fetch_text(url, headers=request_headers("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"))
+            
+            table_match = re.search(r'<table[^>]*class=\"[^\"]*challange__table-activities[^\"]*\".*?</table>', html, re.DOTALL)
+            if not table_match:
+                continue
+            
+            table_html = table_match.group(0)
+            rows = re.findall(r'<tr[^>]*>.*?</tr>', table_html, re.DOTALL)
+            
+            for row in rows[1:]:
+                tds = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL)
+                if len(tds) < 9:
+                    continue
+                
+                name = re.sub(r'<[^>]*>', '', tds[0]).strip()
+                title = re.sub(r'<[^>]*>', '', tds[1]).strip()
+                
+                dist_text = re.sub(r'<[^>]*>', '', tds[2]).strip()
+                dist = parse_number(dist_text)
+                
+                time_text = re.sub(r'<[^>]*>', '', tds[4]).strip()
+                time_sec = parse_time_to_seconds(time_text)
+                
+                date_raw = re.sub(r'<[^>]*>', '', tds[6]).strip()
+                
+                link_td = tds[8]
+                link_match = re.search(r'href=\"(https?://(?:www\.)?strava\.com/activities/\d+)\"', link_td)
+                strava_url = link_match.group(1) if link_match else None
+                
+                if strava_url:
+                    rk = make_activity_id(name, date_raw, title, dist, time_sec)
+                    strava_map[rk] = strava_url
+        except Exception as e:
+            logger.error(f"Sync: Blad podczas zeskrobywania linkow Strava ze strony {page}: {e}")
+    return strava_map
+
+
 def sync_activities(slug, full_import=False):
     global _session_valid, _last_status_check
     auto_login_if_configured()
@@ -215,8 +257,31 @@ def sync_activities(slug, full_import=False):
 
     activities = parse_csv_activities(csv_text)
     
+    # Dynamic page detection to scrape Strava URLs
+    num_new_approx = 15 # default page size detection buffer
+    if not full_import:
+        try:
+            existing = load_activities(slug) or []
+            num_new_approx = max(15, len(activities) - len(existing) + 5)
+        except Exception:
+            pass
+    else:
+        num_new_approx = len(activities)
+        
+    pages_to_scrape = min(350, (num_new_approx // 10) + 2)
+    logger.info(f"Sync: Pobieranie linkow Strava z pierwszych {pages_to_scrape} stron portalu...")
+    
+    try:
+        strava_map = scrape_strava_urls(slug, num_pages=pages_to_scrape)
+        for act in activities:
+            rk = make_activity_id(act["name"], act.get("dateRaw", act["dateStr"]), act["title"], act["dist"], act["timeSec"])
+            if rk in strava_map:
+                act["stravaUrl"] = strava_map[rk]
+    except Exception as e:
+        logger.error(f"Sync: Nie udalo sie powiazac linkow Strava: {e}")
+
     if full_import:
-        logger.info(f"Sync: Uruchomiono pełny import (Full Import) dla wyzwania: {slug}. Liczba treningów: {len(activities)}")
+        logger.info(f"Sync: Uruchomiono pelny import (Full Import) dla wyzwania: {slug}. Liczba treningow: {len(activities)}")
         save_activities_batch(slug, activities)
         return len(activities)
     

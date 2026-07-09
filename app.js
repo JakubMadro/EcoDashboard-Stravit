@@ -305,7 +305,7 @@ function updateHeader() {
 
 // ==================== SCRIPT BLOCK ====================
 
-const PALETTE = ['#ffb700','#2ec4b6','#ef476f','#38bdf8','#a78bfa','#fb923c','#94e2d5','#f472b6'];
+const PALETTE = ['#ffb700','#2ec4b6','#ef476f','#38bdf8','#a78bfa','#fb923c','#94e2d5','#f472b6','#10b981','#6366f1','#ec4899','#06b6d4','#84cc16','#d946ef','#f97316','#3b82f6','#a855f7','#14b8a6','#0ea5e9','#4ade80'];
 let ME_NAME = localStorage.getItem('dashboard-me') || '';
 let crewId = localStorage.getItem('dashboard-crew-id');
 if (!crewId) {
@@ -314,8 +314,8 @@ if (!crewId) {
 }
 let profileId = localStorage.getItem('dashboard-profile-id') || '';
 let savedProfiles = [];
-const TYPE_LABELS = {Run:'Bieganie', Walk:'Marsz', Ride:'Kolarstwo', VirtualRide:'Kolarstwo (trenażer)', Hike:'Wędrówka', WeightTraining:'Siłownia', Swim:'Pływanie', Workout:'Trening', InlineSkate:'Rolki'};
-const TYPE_COLORS = {Run:'#ef476f', Walk:'#ffb700', Ride:'#2ec4b6', VirtualRide:'#0891a4', Hike:'#a78bfa', WeightTraining:'#f472b6', Swim:'#38bdf8', Workout:'#fb923c', InlineSkate:'#94a3b8'};
+const TYPE_LABELS = {Run:'Bieganie', Walk:'Marsz', Ride:'Kolarstwo', VirtualRide:'Kolarstwo (trenażer)', Hike:'Wędrówka', WeightTraining:'Siłownia', Swim:'Pływanie', Workout:'Trening', InlineSkate:'Rolki', Yoga:'Joga'};
+const TYPE_COLORS = {Run:'#ef476f', Walk:'#ffb700', Ride:'#2ec4b6', VirtualRide:'#0891a4', Hike:'#a78bfa', WeightTraining:'#f472b6', Swim:'#38bdf8', Workout:'#fb923c', InlineSkate:'#94a3b8', Yoga:'#10b981'};
 
 let crew = [];
 let charts = {};
@@ -774,6 +774,10 @@ function renderBarChart(){
   destroyChart('bar');
   const ctx = document.getElementById('barChart');
   const present = crew.filter(n=>DATA.users[n]).slice().sort((a,b)=>DATA.users[b].points-DATA.users[a].points);
+  const canvasWrap = ctx.parentElement;
+  if (canvasWrap) {
+    canvasWrap.style.height = Math.max(150, present.length * 36 + 40) + 'px';
+  }
   charts.bar = new Chart(ctx, {
     type:'bar',
     data:{
@@ -792,7 +796,7 @@ function renderBarChart(){
       plugins:{legend:{display:false}, tooltip:{callbacks:{label:(c)=>` ${c.raw.toFixed(1)} pkt`}}},
       scales:{
         x:{grid:{color:'#1c3a54'}, ticks:{color:'#7f9bb4', font:{family:'JetBrains Mono'}}},
-        y:{grid:{display:false}, ticks:{color:'#eef4f8', font:{family:'Inter', size:13}}}
+        y:{grid:{display:false}, ticks:{autoSkip:false, color:'#eef4f8', font:{family:'Inter', size:13}}}
       }
     }
   });
@@ -898,6 +902,92 @@ function renderStackChart(){
   });
 }
 
+function renderRecentActivities() {
+  const tbody = document.getElementById('recentActivitiesBody');
+  if (!DATA.recentActivities || DATA.recentActivities.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:24px; color:var(--text-muted);">Brak ostatnich treningów dla wybranej ekipy.</td></tr>';
+    return;
+  }
+
+  const SPORT_EMOJIS = {
+    Run: '🏃', Walk: '🚶', Ride: '🚴', VirtualRide: '💻🚴', 
+    Hike: '🥾', WeightTraining: '🏋️', Swim: '🏊', 
+    Workout: '💪', InlineSkate: '🛼', Yoga: '🧘'
+  };
+
+  const SPORT_NAMES = {
+    Run: 'Bieganie', Walk: 'Marsz', Ride: 'Kolarstwo', VirtualRide: 'Kolarstwo (tren.)', 
+    Hike: 'Wędrówka', WeightTraining: 'Siłownia', Swim: 'Pływanie', 
+    Workout: 'Trening', InlineSkate: 'Rolki', Yoga: 'Joga'
+  };
+
+  function formatTime(sec) {
+    const h = Math.floor(sec / 3600);
+    const m = Math.round((sec % 3600) / 60);
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  }
+
+  tbody.innerHTML = DATA.recentActivities.map(act => {
+    const displaySport = SPORT_NAMES[act.type] || act.type;
+    const emoji = SPORT_EMOJIS[act.type] || '❓';
+    const dateFormatted = act.dateRaw ? act.dateRaw.substring(5, 16) : act.dateStr;
+
+    const stravaBtn = act.stravaUrl ? `
+      <a href="${act.stravaUrl}" target="_blank" style="color: #fc4c02; font-size: 16px; text-decoration: none; display: inline-block; padding: 2px 6px;" title="Otwórz w Strava">
+        🧡
+      </a>
+    ` : '—';
+
+    return `
+      <tr>
+        <td>
+          <div style="font-weight:700; color:#eef4f8;">${act.name}</div>
+        </td>
+        <td>
+          <div style="font-weight:600; color:#eef4f8; font-size:12px;">${emoji} ${act.title}</div>
+          <div style="font-size:10px; color:var(--text-muted); margin-top:2px;">${dateFormatted}</div>
+        </td>
+        <td style="text-align:right;">
+          <div style="font-weight:700; color:#ffb700;">${act.pts.toFixed(1)} pkt</div>
+          <div style="font-size:10px; color:var(--text-muted); margin-top:2px;">
+            ${act.dist > 0 ? `${act.dist.toFixed(1)} km | ` : ''}${formatTime(act.timeSec)}
+          </div>
+        </td>
+        <td style="text-align:center; vertical-align:middle;">
+          ${stravaBtn}
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderCrewLeaderboard() {
+  const tbody = document.getElementById('crewLeaderboardBody');
+  if (!DATA.users || Object.keys(DATA.users).length === 0) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:24px; color:var(--text-muted);">Brak danych o członkach ekipy. Dodaj zawodnika w panelu bocznym!</td></tr>';
+    return;
+  }
+
+  const crewList = Object.keys(DATA.users).map(name => ({
+    name: name,
+    points: DATA.users[name].points,
+    generalRank: DATA.users[name].rank
+  }));
+
+  crewList.sort((a, b) => b.points - a.points);
+
+  tbody.innerHTML = crewList.map((l, index) => `
+    <tr class="${l.name === ME_NAME ? 'tracked' : ''}">
+      <td class="rankcol">${index + 1}</td>
+      <td>
+        <span style="font-weight:600;">${l.name}</span>
+        <span style="font-size:10px; color:var(--text-muted); margin-left:6px;" title="Miejsce w klasyfikacji generalnej">(Gen #${l.generalRank})</span>
+        ${l.name === ME_NAME ? ' <span class="tag-me">JA</span>' : ''}
+      </td>
+      <td class="ptscol">${l.points.toFixed(1)}</td>
+    </tr>`).join('');
+}
+
 function renderTop10(){
   const tbody = document.getElementById('top10Body');
   tbody.innerHTML = DATA.topLeaders.map(l=>`
@@ -916,6 +1006,8 @@ function renderAll(){
   renderCumulativeChart();
   renderLineChart();
   renderStackChart();
+  renderRecentActivities();
+  renderCrewLeaderboard();
   renderTop10();
 }
 
@@ -1187,5 +1279,29 @@ function closeChartModal() {
   if (modalChart) {
     modalChart.destroy();
     modalChart = null;
+  }
+}
+
+function toggleChartLegend(chartKey, showAll) {
+  const chart = charts[chartKey];
+  if (!chart) return;
+  chart.data.datasets.forEach(d => { d.hidden = !showAll; });
+  chart.update();
+  
+  if (modalChart && document.getElementById('chartModal').classList.contains('show')) {
+    modalChart.data.datasets.forEach(d => { d.hidden = !showAll; });
+    modalChart.update();
+  }
+}
+
+function toggleChartLegendSolo(chartKey) {
+  const chart = charts[chartKey];
+  if (!chart) return;
+  chart.data.datasets.forEach(d => { d.hidden = (d.label !== ME_NAME); });
+  chart.update();
+  
+  if (modalChart && document.getElementById('chartModal').classList.contains('show')) {
+    modalChart.data.datasets.forEach(d => { d.hidden = (d.label !== ME_NAME); });
+    modalChart.update();
   }
 }
