@@ -195,13 +195,52 @@
         <section class="glass-card main-section">
           <div class="section-head">
             <span class="section-num">06</span>
-            <h2>Top 10 generalnej</h2>
+            <h2>Ostatnie 10 treningów</h2>
+            <span class="section-hint">ostatnie działania Twojej ekipy</span>
+          </div>
+          <div class="leaderboard-box">
+            <table>
+              <thead>
+                <tr>
+                  <th>Zawodnik</th>
+                  <th>Trening / Kiedy</th>
+                  <th style="text-align:right;">Wyniki</th>
+                  <th style="width:50px; text-align:center;">Strava</th>
+                </tr>
+              </thead>
+              <tbody id="recentActivitiesBody">
+                <tr><td colspan="4" style="text-align:center; padding: 24px; color: var(--text-muted);">Ładowanie danych...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <div class="main-bottom-grid" style="margin-top: 24px;">
+        <section class="glass-card main-section">
+          <div class="section-head">
+            <span class="section-num">07</span>
+            <h2>Klasyfikacja generalna</h2>
             <span class="section-hint">Twoja ekipa podświetlona</span>
           </div>
           <div class="leaderboard-box">
             <table>
               <thead><tr><th>#</th><th>Zawodnik</th><th style="text-align:right;">Punkty</th></tr></thead>
               <tbody id="top10Body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="glass-card main-section">
+          <div class="section-head">
+            <span class="section-num">08</span>
+            <h2>Klasyfikacja drużyny</h2>
+            <span class="section-hint">tylko członkowie Twojej ekipy</span>
+          </div>
+          <div class="leaderboard-box">
+            <table>
+              <thead><tr><th>#</th><th>Zawodnik</th><th style="text-align:right;">Punkty</th></tr></thead>
+              <tbody id="crewLeaderboardBody"></tbody>
             </table>
           </div>
         </section>

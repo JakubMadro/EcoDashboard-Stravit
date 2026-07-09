@@ -902,6 +902,92 @@ function renderStackChart(){
   });
 }
 
+function renderRecentActivities() {
+  const tbody = document.getElementById('recentActivitiesBody');
+  if (!DATA.recentActivities || DATA.recentActivities.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:24px; color:var(--text-muted);">Brak ostatnich treningów dla wybranej ekipy.</td></tr>';
+    return;
+  }
+
+  const SPORT_EMOJIS = {
+    Run: '🏃', Walk: '🚶', Ride: '🚴', VirtualRide: '💻🚴', 
+    Hike: '🥾', WeightTraining: '🏋️', Swim: '🏊', 
+    Workout: '💪', InlineSkate: '🛼', Yoga: '🧘'
+  };
+
+  const SPORT_NAMES = {
+    Run: 'Bieganie', Walk: 'Marsz', Ride: 'Kolarstwo', VirtualRide: 'Kolarstwo (tren.)', 
+    Hike: 'Wędrówka', WeightTraining: 'Siłownia', Swim: 'Pływanie', 
+    Workout: 'Trening', InlineSkate: 'Rolki', Yoga: 'Joga'
+  };
+
+  function formatTime(sec) {
+    const h = Math.floor(sec / 3600);
+    const m = Math.round((sec % 3600) / 60);
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  }
+
+  tbody.innerHTML = DATA.recentActivities.map(act => {
+    const displaySport = SPORT_NAMES[act.type] || act.type;
+    const emoji = SPORT_EMOJIS[act.type] || '❓';
+    const dateFormatted = act.dateRaw ? act.dateRaw.substring(5, 16) : act.dateStr;
+
+    const stravaBtn = act.stravaUrl ? `
+      <a href="${act.stravaUrl}" target="_blank" style="color: #fc4c02; font-size: 16px; text-decoration: none; display: inline-block; padding: 2px 6px;" title="Otwórz w Strava">
+        🧡
+      </a>
+    ` : '—';
+
+    return `
+      <tr>
+        <td>
+          <div style="font-weight:700; color:#eef4f8;">${act.name}</div>
+        </td>
+        <td>
+          <div style="font-weight:600; color:#eef4f8; font-size:12px;">${emoji} ${act.title}</div>
+          <div style="font-size:10px; color:var(--text-muted); margin-top:2px;">${dateFormatted}</div>
+        </td>
+        <td style="text-align:right;">
+          <div style="font-weight:700; color:#ffb700;">${act.pts.toFixed(1)} pkt</div>
+          <div style="font-size:10px; color:var(--text-muted); margin-top:2px;">
+            ${act.dist > 0 ? `${act.dist.toFixed(1)} km | ` : ''}${formatTime(act.timeSec)}
+          </div>
+        </td>
+        <td style="text-align:center; vertical-align:middle;">
+          ${stravaBtn}
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderCrewLeaderboard() {
+  const tbody = document.getElementById('crewLeaderboardBody');
+  if (!DATA.users || Object.keys(DATA.users).length === 0) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:24px; color:var(--text-muted);">Brak danych o członkach ekipy. Dodaj zawodnika w panelu bocznym!</td></tr>';
+    return;
+  }
+
+  const crewList = Object.keys(DATA.users).map(name => ({
+    name: name,
+    points: DATA.users[name].points,
+    generalRank: DATA.users[name].rank
+  }));
+
+  crewList.sort((a, b) => b.points - a.points);
+
+  tbody.innerHTML = crewList.map((l, index) => `
+    <tr class="${l.name === ME_NAME ? 'tracked' : ''}">
+      <td class="rankcol">${index + 1}</td>
+      <td>
+        <span style="font-weight:600;">${l.name}</span>
+        <span style="font-size:10px; color:var(--text-muted); margin-left:6px;" title="Miejsce w klasyfikacji generalnej">(Gen #${l.generalRank})</span>
+        ${l.name === ME_NAME ? ' <span class="tag-me">JA</span>' : ''}
+      </td>
+      <td class="ptscol">${l.points.toFixed(1)}</td>
+    </tr>`).join('');
+}
+
 function renderTop10(){
   const tbody = document.getElementById('top10Body');
   tbody.innerHTML = DATA.topLeaders.map(l=>`
@@ -920,6 +1006,8 @@ function renderAll(){
   renderCumulativeChart();
   renderLineChart();
   renderStackChart();
+  renderRecentActivities();
+  renderCrewLeaderboard();
   renderTop10();
 }
 
