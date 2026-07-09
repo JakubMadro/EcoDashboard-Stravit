@@ -267,7 +267,7 @@ async function refreshData(force = false) {
     if (ME_NAME && !crew.includes(ME_NAME)) {
       crew.unshift(ME_NAME);
     }
-    await saveCrew();
+    try { localStorage.setItem(getCrewStorageKey(), JSON.stringify(crew)); } catch(e){}
     renderAll();
   } catch(err) {
     if (status) { status.textContent = '✗ ' + err.message; status.style.color = 'var(--coral)'; }
@@ -563,6 +563,8 @@ function setupCustomAutocomplete(inputId, suggestionsId, getSourceFn, onSelect) 
     list.classList.remove('show');
     list.innerHTML = '';
     activeIndex = -1;
+    const section = input.closest('.sidebar-section');
+    if (section) section.classList.remove('has-open-suggestions');
   }
 
   async function showSuggestions(query) {
@@ -572,6 +574,9 @@ function setupCustomAutocomplete(inputId, suggestionsId, getSourceFn, onSelect) 
       closeSuggestions();
       return;
     }
+
+    const section = input.closest('.sidebar-section');
+    if (section) section.classList.add('has-open-suggestions');
 
     currentItems = source.filter(item => {
       const str = typeof item === 'object' && item !== null ? (item.me || item.name || '') : item;
@@ -704,12 +709,20 @@ function renderBibs(){
     grid.innerHTML = '<div class="empty">Brak zawodników w ekipie. Dodaj pierwszą osobę powyżej, żeby zobaczyć jej kartę startową.</div>';
     return;
   }
-  crew.forEach(name=>{
+  
+  const sortedCrew = [...crew]
+    .filter(name => DATA.users[name])
+    .sort((a, b) => {
+      const uA = DATA.users[a];
+      const uB = DATA.users[b];
+      return (uA.rank || 9999) - (uB.rank || 9999);
+    });
+
+  sortedCrew.forEach(name=>{
     const u = DATA.users[name];
-    if(!u) return;
     const c = colorFor(name);
     const card = document.createElement('div');
-    card.className = 'bib';
+    card.className = `bib${name===ME_NAME ? ' bib-me' : ''}`;
     card.innerHTML = `
       <div class="accentbar" style="background:${c}"></div>
       <div class="bib-rank">MIEJSCE #${u.rank} / ${DATA.totalUsers}</div>
@@ -857,7 +870,7 @@ function renderLineChart(){
 function renderStackChart(){
   destroyChart('stack');
   const ctx = document.getElementById('stackChart');
-  const present = crew.filter(n=>DATA.users[n]);
+  const present = crew.filter(n=>DATA.users[n]).slice().sort((a,b)=>DATA.users[b].points-DATA.users[a].points);
   const allTypes = Object.keys(TYPE_LABELS).filter(t=>present.some(n=>DATA.users[n].byType[t]));
   const canvasWrap = ctx.parentElement;
   canvasWrap.style.height = Math.max(120, present.length*54+60)+'px';
@@ -1080,14 +1093,18 @@ async function addAthlete(){
   } catch(e) {}
 
   // Inicjalizacja autouzupełniania dla pól wyszukiwania
-  setupCustomAutocomplete('addInput', 'addSuggestions', ensureNamesLoaded);
+  setupCustomAutocomplete('addInput', 'addSuggestions', ensureNamesLoaded, () => {
+    document.getElementById('addBtn').click();
+  });
   setupCustomAutocomplete('profileInput', 'profileSuggestions', () => savedProfiles, async (profile) => {
     if (profile && profile.id) {
       await loadProfileById(profile.id);
       document.getElementById('profileInput').value = '';
     }
   });
-  setupCustomAutocomplete('meInput', 'meSuggestions', ensureNamesLoaded);
+  setupCustomAutocomplete('meInput', 'meSuggestions', ensureNamesLoaded, () => {
+    document.getElementById('createProfileBtn').click();
+  });
 
   // Załaduj dane (automatycznie pobierze profil w Promise.all)
   await refreshData(false);

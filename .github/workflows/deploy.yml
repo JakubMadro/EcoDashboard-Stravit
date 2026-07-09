@@ -1,0 +1,46 @@
+name: Deploy EcoDashboard to Azure
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install Dependencies
+      run: |
+        python -m venv env
+        source env/bin/activate
+        pip install --target="./.python_packages/lib/site-packages" -r requirements.txt
+
+    - name: Zip application
+      run: |
+        zip -r release.zip . -x "env/*" ".git/*" ".github/*" "terraform/*" "data/*"
+
+    - name: Deploy to Azure Web App (DEV)
+      if: github.ref == 'refs/heads/dev'
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'eco-dashboard-stravit-dev'
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_DEV }}
+        package: release.zip
+
+    - name: Deploy to Azure Web App (PROD)
+      if: github.ref == 'refs/heads/main'
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'ecodashboardfin'
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD }}
+        package: release.zip

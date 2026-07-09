@@ -636,6 +636,15 @@
     transform: translateY(-2px);
     box-shadow: 0 10px 25px rgba(0,0,0,0.3);
   }
+  .bib.bib-me {
+    background: linear-gradient(135deg, rgba(255, 183, 0, 0.07), rgba(11, 24, 38, 0.5)) !important;
+    border: 1px solid rgba(255, 183, 0, 0.35);
+    box-shadow: 0 4px 20px rgba(255, 183, 0, 0.08);
+  }
+  .bib.bib-me:hover {
+    border-color: var(--amber);
+    box-shadow: 0 8px 30px rgba(255, 183, 0, 0.18);
+  }
   .bib::before, .bib::after {
     content: '';
     position: absolute;
@@ -1251,7 +1260,8 @@
   /* Elevate parent cards to prevent other cards stacking on top of active dropdowns */
   .glass-card:focus-within,
   .sidebar-section:focus-within,
-  .autocomplete-wrapper:focus-within {
+  .autocomplete-wrapper:focus-within,
+  .sidebar-section.has-open-suggestions {
     position: relative;
     z-index: 50 !important;
   }
