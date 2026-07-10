@@ -351,7 +351,7 @@ def run_sync_job_execution(slug, full_import=False, trigger_type="periodic"):
 
 
 def background_worker(slug):
-    last_periodic_sync = 0
+    last_periodic_sync = time.time()
     
     # Auto cold-start helper on server startup only if database is completely empty
     try:
