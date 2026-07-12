@@ -86,24 +86,32 @@ def parse_activities_from_html(html):
     return parsed
 
 def main():
-    # Detect connection string
-    conn_str = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
-    if not conn_str:
-        target = sys.argv[1] if len(sys.argv) > 1 else "dev"
+    # Force target if passed as CLI argument, otherwise fallback to AZURE_STORAGE_CONNECTION_STRING
+    conn_str = None
+    target = sys.argv[1] if len(sys.argv) > 1 else None
+    
+    if target in ("dev", "prod"):
         if target == "prod":
             conn_str = os.environ.get("PROD_STORAGE_CONNECTION_STRING")
             print("Using PROD database from PROD_STORAGE_CONNECTION_STRING.")
         else:
             conn_str = os.environ.get("DEV_STORAGE_CONNECTION_STRING")
             print("Using DEV database from DEV_STORAGE_CONNECTION_STRING.")
-            
-        if not conn_str:
-            print("Error: Azure connection string is not configured.")
-            print("Please set AZURE_STORAGE_CONNECTION_STRING or DEV_STORAGE_CONNECTION_STRING/PROD_STORAGE_CONNECTION_STRING in your env or .env file.")
-            sys.exit(1)
-            
-        os.environ["AZURE_STORAGE_CONNECTION_STRING"] = conn_str
-        db.AZURE_STORAGE_CONN_STR = conn_str
+    else:
+        conn_str = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
+        if conn_str and "AccountName=..." not in conn_str:
+            print("Using connection string from AZURE_STORAGE_CONNECTION_STRING.")
+        else:
+            conn_str = os.environ.get("DEV_STORAGE_CONNECTION_STRING")
+            print("Fallback: Using DEV database from DEV_STORAGE_CONNECTION_STRING.")
+
+    if not conn_str or "AccountName=..." in conn_str:
+        print("Error: Azure connection string is not configured or contains placeholder '...' values.")
+        print("Please configure AZURE_STORAGE_CONNECTION_STRING or DEV_STORAGE_CONNECTION_STRING/PROD_STORAGE_CONNECTION_STRING in your .env file.")
+        sys.exit(1)
+        
+    os.environ["AZURE_STORAGE_CONNECTION_STRING"] = conn_str
+    db.AZURE_STORAGE_CONN_STR = conn_str
 
     print("Step 1: Logging in to Stravit...")
     email = os.environ.get("STRAVIT_EMAIL")

@@ -14,6 +14,11 @@
     --muted: #94a3b8;
     --muted2: #475569;
     --glow: rgba(6, 182, 212, 0.1);
+    
+    /* MTU Polska Brand Colors (confined only to turbine loaders) */
+    --mtu-red: #CC1D56;
+    --mtu-blue: #003963;
+    --mtu-white: #ffffff;
   }
 
   * { box-sizing: border-box; }
@@ -1395,4 +1400,183 @@
   }
   .chart-action-btn:active {
     transform: translateY(1px);
+  }
+
+  /* =====================================================================
+     TURBINE LOADER STYLING
+     ===================================================================== */
+  .turbine-loader-wrapper {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .turbine-loader-wrapper.row-layout {
+    flex-direction: row;
+    gap: 10px;
+    padding: 0;
+  }
+
+  .turbine-loader-svg {
+    width: 80px;
+    height: 80px;
+    color: var(--mtu-red, #CC1D56);
+    filter: drop-shadow(0 0 12px rgba(204, 29, 86, 0.45));
+    animation: turbine-glow-pulse 2s ease-in-out infinite alternate;
+  }
+
+  /* Small version for buttons and tables */
+  .turbine-loader-wrapper.small {
+    padding: 4px;
+    gap: 8px;
+  }
+
+  .turbine-loader-wrapper.small .turbine-loader-svg {
+    width: 24px;
+    height: 24px;
+    filter: drop-shadow(0 0 5px rgba(204, 29, 86, 0.35));
+  }
+
+  /* Large version for full-screen load overlays */
+  .turbine-loader-wrapper.large {
+    gap: 24px;
+    padding: 32px;
+  }
+
+  .turbine-loader-wrapper.large .turbine-loader-svg {
+    width: 160px;
+    height: 160px;
+    filter: drop-shadow(0 0 25px rgba(204, 29, 86, 0.55));
+  }
+
+  .turbine-loader-wrapper.large .turbine-loader-text {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text, #f8fafc);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* Centered Viewport Overlay Loader */
+  .full-page-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(7, 11, 19, 0.97); /* Solid matching dark background */
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 99999;
+    transition: opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.5s;
+  }
+
+  .full-page-loader.fade-out {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  /* Center loader overlay for dashboard-main container */
+  .dashboard-main {
+    position: relative;
+  }
+
+  .main-content-loader {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(7, 11, 19, 0.75); /* matches --bg-dark with transparency */
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: block; /* Block layout to allow sticky positioning inside */
+    z-index: 1000;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    border-radius: 16px;
+  }
+
+  .main-content-loader.fade-out {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .main-content-loader .turbine-loader-wrapper {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 35vh; /* Center vertically inside viewport while scrolling */
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    background: rgba(13, 27, 43, 0.9); /* Dark contrast card matching design */
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+    padding: 24px 32px;
+  }
+
+  .turbine-loader-casing {
+    stroke: var(--mtu-white, #ffffff);
+    stroke-width: 3.5;
+    fill: none;
+    opacity: 0.9;
+  }
+
+  .turbine-inner-casing {
+    stroke: var(--muted, #94a3b8);
+    stroke-width: 1;
+    fill: none;
+    opacity: 0.3;
+    stroke-dasharray: 2 2;
+  }
+
+  .turbine-rotor {
+    transform-origin: 50px 50px;
+    animation: turbine-spin 1s linear infinite;
+  }
+
+  @keyframes turbine-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes turbine-glow-pulse {
+    from { filter: drop-shadow(0 0 6px rgba(204, 29, 86, 0.3)); }
+    to { filter: drop-shadow(0 0 16px rgba(204, 29, 86, 0.6)); }
+  }
+
+  .turbine-blade {
+    fill: var(--mtu-white, #ffffff);
+    opacity: 0.85;
+  }
+
+  .turbine-spinner {
+    fill: var(--mtu-red, #CC1D56);
+  }
+
+  .turbine-spiral {
+    stroke: var(--mtu-blue, #003963);
+    stroke-width: 1.8;
+    fill: none;
+    stroke-linecap: round;
+  }
+
+  .turbine-loader-text {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted, #94a3b8);
+    letter-spacing: 0.05em;
   }

@@ -159,6 +159,40 @@
 </style>
 </head>
 <body>
+<div id="fullPageLoader" class="full-page-loader">
+  <div class="turbine-loader-wrapper large">
+    <svg class="turbine-loader-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <path id="turbine-blade-large-sus-def" class="turbine-blade" d="M 50 50 C 46 36, 42 22, 50 8 C 53 22, 49 36, 50 50 Z" />
+      </defs>
+      <circle cx="50" cy="50" r="45" class="turbine-casing" />
+      <circle cx="50" cy="50" r="41" class="turbine-inner-casing" />
+      <g class="turbine-rotor">
+        <use href="#turbine-blade-large-sus-def" transform="rotate(0 50 50)" />
+        <use href="#turbine-blade-large-sus-def" transform="rotate(20 50 50)" />
+        <use href="#turbine-blade-large-sus-def" transform="rotate(40 50 50)" />
+        <use href="#turbine-blade-large-sus-def" transform="rotate(60 50 50)" />
+        <use href="#turbine-blade-large-sus-def" transform="rotate(80 50 50)" />
+        <use href="#turbine-blade-large-sus-def" transform="rotate(100 50 50)" />
+        <use href="#turbine-blade-large-sus-def" transform="rotate(120 50 50)" />
+        <use href="#turbine-blade-large-sus-def" transform="rotate(140 50 50)" />
+        <use href="#turbine-blade-large-sus-def" transform="rotate(160 50 50)" />
+        <use href="#turbine-blade-large-sus-def" transform="rotate(180 50 50)" />
+        <use href="#turbine-blade-large-sus-def" transform="rotate(200 50 50)" />
+        <use href="#turbine-blade-large-sus-def" transform="rotate(220 50 50)" />
+        <use href="#turbine-blade-large-sus-def" transform="rotate(240 50 50)" />
+        <use href="#turbine-blade-large-sus-def" transform="rotate(260 50 50)" />
+        <use href="#turbine-blade-large-sus-def" transform="rotate(280 50 50)" />
+        <use href="#turbine-blade-large-sus-def" transform="rotate(300 50 50)" />
+        <use href="#turbine-blade-large-sus-def" transform="rotate(320 50 50)" />
+        <use href="#turbine-blade-large-sus-def" transform="rotate(340 50 50)" />
+        <circle cx="50" cy="50" r="14" class="turbine-spinner" />
+        <path d="M 50 50 Q 48 44 43 45 T 48 54" class="turbine-spiral" />
+      </g>
+    </svg>
+    <span class="turbine-loader-text">Weryfikacja treningów bazy...</span>
+  </div>
+</div>
 <div class="wrap">
   <div class="track-lines-neon" style="background: linear-gradient(90deg, transparent, var(--danger), transparent); opacity: 0.3;"></div>
   
@@ -166,7 +200,40 @@
     <div class="title-block">
       <div class="eyebrow" style="color: var(--danger);">Panel Administracyjny · Weryfikacja Danych</div>
       <h1>Podejrzane Aktywności 🕵️‍♂️</h1>
-      <div class="subtitle" id="subtitleText">Ładowanie historii treningów z bazy...</div>
+      <div class="subtitle" id="subtitleText">
+        <span class="turbine-loader-wrapper small row-layout">
+          <svg class="turbine-loader-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px;">
+            <defs>
+              <path id="turbine-blade-sus-status" class="turbine-blade" d="M 50 50 C 46 36, 42 22, 50 8 C 53 22, 49 36, 50 50 Z" />
+            </defs>
+            <circle cx="50" cy="50" r="45" class="turbine-casing" />
+            <circle cx="50" cy="50" r="41" class="turbine-inner-casing" />
+            <g class="turbine-rotor">
+              <use href="#turbine-blade-sus-status" transform="rotate(0 50 50)" />
+              <use href="#turbine-blade-sus-status" transform="rotate(20 50 50)" />
+              <use href="#turbine-blade-sus-status" transform="rotate(40 50 50)" />
+              <use href="#turbine-blade-sus-status" transform="rotate(60 50 50)" />
+              <use href="#turbine-blade-sus-status" transform="rotate(80 50 50)" />
+              <use href="#turbine-blade-sus-status" transform="rotate(100 50 50)" />
+              <use href="#turbine-blade-sus-status" transform="rotate(120 50 50)" />
+              <use href="#turbine-blade-sus-status" transform="rotate(140 50 50)" />
+              <use href="#turbine-blade-sus-status" transform="rotate(160 50 50)" />
+              <use href="#turbine-blade-sus-status" transform="rotate(180 50 50)" />
+              <use href="#turbine-blade-sus-status" transform="rotate(200 50 50)" />
+              <use href="#turbine-blade-sus-status" transform="rotate(220 50 50)" />
+              <use href="#turbine-blade-sus-status" transform="rotate(240 50 50)" />
+              <use href="#turbine-blade-sus-status" transform="rotate(260 50 50)" />
+              <use href="#turbine-blade-sus-status" transform="rotate(280 50 50)" />
+              <use href="#turbine-blade-sus-status" transform="rotate(300 50 50)" />
+              <use href="#turbine-blade-sus-status" transform="rotate(320 50 50)" />
+              <use href="#turbine-blade-sus-status" transform="rotate(340 50 50)" />
+              <circle cx="50" cy="50" r="14" class="turbine-spinner" />
+              <path d="M 50 50 Q 48 44 43 45 T 48 54" class="turbine-spiral" />
+            </g>
+          </svg>
+          <span class="turbine-loader-text">Ładowanie historii treningów z bazy...</span>
+        </span>
+      </div>
     </div>
     <div class="header-right">
       <div class="header-actions">
@@ -197,7 +264,40 @@
           <h3 style="margin: 0; font-size: 14px; font-weight: 700; color: #eef4f8;">Liderzy oflagowań (TOP 3)</h3>
         </div>
         <div style="padding: 14px 18px;" id="topSuspectsList">
-          <div style="color: var(--text-muted); font-size: 13px; text-align: center;">Ładowanie...</div>
+          <div style="display: flex; justify-content: center; align-items: center; padding: 10px;">
+            <span class="turbine-loader-wrapper small row-layout">
+              <svg class="turbine-loader-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px;">
+                <defs>
+                  <path id="turbine-blade-sus-top" class="turbine-blade" d="M 50 50 C 46 36, 42 22, 50 8 C 53 22, 49 36, 50 50 Z" />
+                </defs>
+                <circle cx="50" cy="50" r="45" class="turbine-casing" />
+                <circle cx="50" cy="50" r="41" class="turbine-inner-casing" />
+                <g class="turbine-rotor">
+                  <use href="#turbine-blade-sus-top" transform="rotate(0 50 50)" />
+                  <use href="#turbine-blade-sus-top" transform="rotate(20 50 50)" />
+                  <use href="#turbine-blade-sus-top" transform="rotate(40 50 50)" />
+                  <use href="#turbine-blade-sus-top" transform="rotate(60 50 50)" />
+                  <use href="#turbine-blade-sus-top" transform="rotate(80 50 50)" />
+                  <use href="#turbine-blade-sus-top" transform="rotate(100 50 50)" />
+                  <use href="#turbine-blade-sus-top" transform="rotate(120 50 50)" />
+                  <use href="#turbine-blade-sus-top" transform="rotate(140 50 50)" />
+                  <use href="#turbine-blade-sus-top" transform="rotate(160 50 50)" />
+                  <use href="#turbine-blade-sus-top" transform="rotate(180 50 50)" />
+                  <use href="#turbine-blade-sus-top" transform="rotate(200 50 50)" />
+                  <use href="#turbine-blade-sus-top" transform="rotate(220 50 50)" />
+                  <use href="#turbine-blade-sus-top" transform="rotate(240 50 50)" />
+                  <use href="#turbine-blade-sus-top" transform="rotate(260 50 50)" />
+                  <use href="#turbine-blade-sus-top" transform="rotate(280 50 50)" />
+                  <use href="#turbine-blade-sus-top" transform="rotate(300 50 50)" />
+                  <use href="#turbine-blade-sus-top" transform="rotate(320 50 50)" />
+                  <use href="#turbine-blade-sus-top" transform="rotate(340 50 50)" />
+                  <circle cx="50" cy="50" r="14" class="turbine-spinner" />
+                  <path d="M 50 50 Q 48 44 43 45 T 48 54" class="turbine-spiral" />
+                </g>
+              </svg>
+              <span class="turbine-loader-text">Ładowanie...</span>
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -250,7 +350,40 @@
           </thead>
           <tbody id="suspectsBody">
             <tr>
-              <td colspan="6" class="empty-state">Ładowanie danych z bazy...</td>
+              <td colspan="6" class="empty-state">
+                <span class="turbine-loader-wrapper small row-layout" style="justify-content: center;">
+                  <svg class="turbine-loader-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px;">
+                    <defs>
+                      <path id="turbine-blade-sus-table" class="turbine-blade" d="M 50 50 C 46 36, 42 22, 50 8 C 53 22, 49 36, 50 50 Z" />
+                    </defs>
+                    <circle cx="50" cy="50" r="45" class="turbine-casing" />
+                    <circle cx="50" cy="50" r="41" class="turbine-inner-casing" />
+                    <g class="turbine-rotor">
+                      <use href="#turbine-blade-sus-table" transform="rotate(0 50 50)" />
+                      <use href="#turbine-blade-sus-table" transform="rotate(20 50 50)" />
+                      <use href="#turbine-blade-sus-table" transform="rotate(40 50 50)" />
+                      <use href="#turbine-blade-sus-table" transform="rotate(60 50 50)" />
+                      <use href="#turbine-blade-sus-table" transform="rotate(80 50 50)" />
+                      <use href="#turbine-blade-sus-table" transform="rotate(100 50 50)" />
+                      <use href="#turbine-blade-sus-table" transform="rotate(120 50 50)" />
+                      <use href="#turbine-blade-sus-table" transform="rotate(140 50 50)" />
+                      <use href="#turbine-blade-sus-table" transform="rotate(160 50 50)" />
+                      <use href="#turbine-blade-sus-table" transform="rotate(180 50 50)" />
+                      <use href="#turbine-blade-sus-table" transform="rotate(200 50 50)" />
+                      <use href="#turbine-blade-sus-table" transform="rotate(220 50 50)" />
+                      <use href="#turbine-blade-sus-table" transform="rotate(240 50 50)" />
+                      <use href="#turbine-blade-sus-table" transform="rotate(260 50 50)" />
+                      <use href="#turbine-blade-sus-table" transform="rotate(280 50 50)" />
+                      <use href="#turbine-blade-sus-table" transform="rotate(300 50 50)" />
+                      <use href="#turbine-blade-sus-table" transform="rotate(320 50 50)" />
+                      <use href="#turbine-blade-sus-table" transform="rotate(340 50 50)" />
+                      <circle cx="50" cy="50" r="14" class="turbine-spinner" />
+                      <path d="M 50 50 Q 48 44 43 45 T 48 54" class="turbine-spiral" />
+                    </g>
+                  </svg>
+                  <span class="turbine-loader-text">Ładowanie danych z bazy...</span>
+                </span>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -266,6 +399,43 @@
   let flaggedActivities = [];
   let currentSortCol = 'date';
   let currentSortOrder = 'desc';
+
+  function getSmallTurbineLoaderHTML(text) {
+    return `
+    <span class="turbine-loader-wrapper small row-layout" style="display: inline-flex; vertical-align: middle;">
+      <svg class="turbine-loader-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width: 18px; height: 18px;">
+        <defs>
+          <path id="turbine-blade-sus-dynamic" class="turbine-blade" d="M 50 50 C 46 36, 42 22, 50 8 C 53 22, 49 36, 50 50 Z" />
+        </defs>
+        <circle cx="50" cy="50" r="45" class="turbine-casing" />
+        <circle cx="50" cy="50" r="41" class="turbine-inner-casing" />
+        <g class="turbine-rotor">
+          <use href="#turbine-blade-sus-dynamic" transform="rotate(0 50 50)" />
+          <use href="#turbine-blade-sus-dynamic" transform="rotate(20 50 50)" />
+          <use href="#turbine-blade-sus-dynamic" transform="rotate(40 50 50)" />
+          <use href="#turbine-blade-sus-dynamic" transform="rotate(60 50 50)" />
+          <use href="#turbine-blade-sus-dynamic" transform="rotate(80 50 50)" />
+          <use href="#turbine-blade-sus-dynamic" transform="rotate(100 50 50)" />
+          <use href="#turbine-blade-sus-dynamic" transform="rotate(120 50 50)" />
+          <use href="#turbine-blade-sus-dynamic" transform="rotate(140 50 50)" />
+          <use href="#turbine-blade-sus-dynamic" transform="rotate(160 50 50)" />
+          <use href="#turbine-blade-sus-dynamic" transform="rotate(180 50 50)" />
+          <use href="#turbine-blade-sus-dynamic" transform="rotate(200 50 50)" />
+          <use href="#turbine-blade-sus-dynamic" transform="rotate(220 50 50)" />
+          <use href="#turbine-blade-sus-dynamic" transform="rotate(240 50 50)" />
+          <use href="#turbine-blade-sus-dynamic" transform="rotate(260 50 50)" />
+          <use href="#turbine-blade-sus-dynamic" transform="rotate(280 50 50)" />
+          <use href="#turbine-blade-sus-dynamic" transform="rotate(300 50 50)" />
+          <use href="#turbine-blade-sus-dynamic" transform="rotate(320 50 50)" />
+          <use href="#turbine-blade-sus-dynamic" transform="rotate(340 50 50)" />
+          <circle cx="50" cy="50" r="14" class="turbine-spinner" />
+          <path d="M 50 50 Q 48 44 43 45 T 48 54" class="turbine-spiral" />
+        </g>
+      </svg>
+      ${text ? `<span class="turbine-loader-text" style="font-size: 11px; margin-left: 4px;">${text}</span>` : ''}
+    </span>
+    `;
+  }
 
   function sortTable(column) {
     if (currentSortCol === column) {
@@ -413,6 +583,9 @@
     } catch(err) {
       document.getElementById('subtitleText').textContent = 'Błąd pobierania danych!';
       document.getElementById('suspectsBody').innerHTML = `<tr><td colspan="6" class="empty-state" style="color: var(--danger);">Błąd: Nie udało się pobrać treningów z bazy danych. (${err.message})</td></tr>`;
+    } finally {
+      const loader = document.getElementById('fullPageLoader');
+      if (loader) loader.classList.add('fade-out');
     }
   }
 

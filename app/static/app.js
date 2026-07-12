@@ -1,10 +1,75 @@
-/* =====================================================================
-   Dane live pobieramy z lokalnego proxy server.py:
-   /api/challenge/rywalizacja-sportowa/data
+const TURBINE_LOADER_HTML = `
+<div class="turbine-loader-wrapper">
+  <svg class="turbine-loader-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <path id="turbine-blade-def" class="turbine-blade" d="M 50 50 C 46 36, 42 22, 50 8 C 53 22, 49 36, 50 50 Z" />
+    </defs>
+    <circle cx="50" cy="50" r="45" class="turbine-casing" />
+    <circle cx="50" cy="50" r="41" class="turbine-inner-casing" />
+    <g class="turbine-rotor">
+      <use href="#turbine-blade-def" transform="rotate(0 50 50)" />
+      <use href="#turbine-blade-def" transform="rotate(20 50 50)" />
+      <use href="#turbine-blade-def" transform="rotate(40 50 50)" />
+      <use href="#turbine-blade-def" transform="rotate(60 50 50)" />
+      <use href="#turbine-blade-def" transform="rotate(80 50 50)" />
+      <use href="#turbine-blade-def" transform="rotate(100 50 50)" />
+      <use href="#turbine-blade-def" transform="rotate(120 50 50)" />
+      <use href="#turbine-blade-def" transform="rotate(140 50 50)" />
+      <use href="#turbine-blade-def" transform="rotate(160 50 50)" />
+      <use href="#turbine-blade-def" transform="rotate(180 50 50)" />
+      <use href="#turbine-blade-def" transform="rotate(200 50 50)" />
+      <use href="#turbine-blade-def" transform="rotate(220 50 50)" />
+      <use href="#turbine-blade-def" transform="rotate(240 50 50)" />
+      <use href="#turbine-blade-def" transform="rotate(260 50 50)" />
+      <use href="#turbine-blade-def" transform="rotate(280 50 50)" />
+      <use href="#turbine-blade-def" transform="rotate(300 50 50)" />
+      <use href="#turbine-blade-def" transform="rotate(320 50 50)" />
+      <use href="#turbine-blade-def" transform="rotate(340 50 50)" />
+      <circle cx="50" cy="50" r="14" class="turbine-spinner" />
+      <path d="M 50 50 Q 48 44 43 45 T 48 54" class="turbine-spiral" />
+    </g>
+  </svg>
+  <span class="turbine-loader-text">Ładowanie danych...</span>
+</div>
+`;
 
-   CSV zostaje tylko jako awaryjny fallback, gdy sesja Stravit wygasnie
-   albo dashboard zostanie otwarty bez lokalnego serwera.
-   ===================================================================== */
+function getSmallTurbineLoaderHTML(text) {
+  return `
+  <div class="turbine-loader-wrapper small row-layout">
+    <svg class="turbine-loader-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <path id="turbine-blade-small-def" class="turbine-blade" d="M 50 50 C 46 36, 42 22, 50 8 C 53 22, 49 36, 50 50 Z" />
+      </defs>
+      <circle cx="50" cy="50" r="45" class="turbine-casing" />
+      <circle cx="50" cy="50" r="41" class="turbine-inner-casing" />
+      <g class="turbine-rotor">
+        <use href="#turbine-blade-small-def" transform="rotate(0 50 50)" />
+        <use href="#turbine-blade-small-def" transform="rotate(20 50 50)" />
+        <use href="#turbine-blade-small-def" transform="rotate(40 50 50)" />
+        <use href="#turbine-blade-small-def" transform="rotate(60 50 50)" />
+        <use href="#turbine-blade-small-def" transform="rotate(80 50 50)" />
+        <use href="#turbine-blade-small-def" transform="rotate(100 50 50)" />
+        <use href="#turbine-blade-small-def" transform="rotate(120 50 50)" />
+        <use href="#turbine-blade-small-def" transform="rotate(140 50 50)" />
+        <use href="#turbine-blade-small-def" transform="rotate(160 50 50)" />
+        <use href="#turbine-blade-small-def" transform="rotate(180 50 50)" />
+        <use href="#turbine-blade-small-def" transform="rotate(200 50 50)" />
+        <use href="#turbine-blade-small-def" transform="rotate(220 50 50)" />
+        <use href="#turbine-blade-small-def" transform="rotate(240 50 50)" />
+        <use href="#turbine-blade-small-def" transform="rotate(260 50 50)" />
+        <use href="#turbine-blade-small-def" transform="rotate(280 50 50)" />
+        <use href="#turbine-blade-small-def" transform="rotate(300 50 50)" />
+        <use href="#turbine-blade-small-def" transform="rotate(320 50 50)" />
+        <use href="#turbine-blade-small-def" transform="rotate(340 50 50)" />
+        <circle cx="50" cy="50" r="14" class="turbine-spinner" />
+        <path d="M 50 50 Q 48 44 43 45 T 48 54" class="turbine-spiral" />
+      </g>
+    </svg>
+    <span class="turbine-loader-text">${text}</span>
+  </div>
+  `;
+}
+
 async function loadCSV(url) {
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`Nie można załadować CSV: ${resp.status}`);
@@ -176,7 +241,7 @@ async function loginToStravit(event) {
     if (msg) { msg.textContent = 'Podaj email i hasło.'; msg.style.color = 'var(--coral)'; }
     return;
   }
-  if (btn) { btn.disabled = true; btn.textContent = 'Logowanie…'; }
+  if (btn) { btn.disabled = true; btn.innerHTML = getSmallTurbineLoaderHTML('Logowanie…'); }
   if (msg) { msg.textContent = ''; msg.style.color = 'var(--muted)'; }
   try {
     const resp = await fetch('/api/v1/auth/login', {
@@ -193,13 +258,13 @@ async function loginToStravit(event) {
   } catch(err) {
     if (msg) { msg.textContent = err.message; msg.style.color = 'var(--coral)'; }
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'Zaloguj'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = 'Zaloguj'; }
   }
 }
 
 async function triggerSyncAndPoll(fullImport = false) {
   const status = document.getElementById('refreshStatus');
-  if (status) { status.textContent = '⟳ Wysyłanie żądania...'; status.style.color = 'var(--muted)'; }
+  if (status) { status.innerHTML = getSmallTurbineLoaderHTML('Wysyłanie żądania...'); status.style.color = 'var(--muted)'; }
 
   const resp = await fetch(`/api/v1/challenge/${CHALLENGE_SLUG}/sync`, {
     method: 'POST',
@@ -220,9 +285,9 @@ async function triggerSyncAndPoll(fullImport = false) {
         const job = await statusResp.json();
         
         if (job.status === 'requested') {
-          if (status) status.textContent = '⟳ Oczekiwanie w kolejce...';
+          if (status) status.innerHTML = getSmallTurbineLoaderHTML('Oczekiwanie w kolejce...');
         } else if (job.status === 'running') {
-          if (status) status.textContent = '⟳ Pobieranie ze Stravita...';
+          if (status) status.innerHTML = getSmallTurbineLoaderHTML('Pobieranie ze Stravita...');
         } else if (job.status === 'idle') {
           clearInterval(interval);
           resolve();
@@ -245,8 +310,10 @@ async function triggerSyncAndPoll(fullImport = false) {
 async function refreshData(force = false, triggerScrape = false) {
   const btn = document.getElementById('refreshBtn');
   const status = document.getElementById('refreshStatus');
-  if (btn) { btn.disabled = true; btn.textContent = '⟳ Pobieranie…'; }
-  if (status) { status.textContent = ''; status.style.color = 'var(--muted)'; }
+  if (btn) { btn.disabled = true; btn.innerHTML = getSmallTurbineLoaderHTML('Pobieranie…'); }
+  if (status) { status.innerHTML = ''; status.style.color = 'var(--muted)'; }
+  const mainLoader = document.getElementById('mainLoader');
+  if (mainLoader) mainLoader.classList.remove('fade-out');
   try {
     if (triggerScrape) {
       await triggerSyncAndPoll(false);
@@ -323,7 +390,11 @@ async function refreshData(force = false, triggerScrape = false) {
       setAuthPanelVisible(true);
     }
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '↻ Odśwież dane'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = '↻ Odśwież dane'; }
+    const loader = document.getElementById('fullPageLoader');
+    if (loader) loader.classList.add('fade-out');
+    const mainLoader = document.getElementById('mainLoader');
+    if (mainLoader) mainLoader.classList.add('fade-out');
   }
 }
 
@@ -1233,6 +1304,8 @@ async function addAthlete(){
       loadCrew();
       updateHeader();
       renderAll();
+      const loader = document.getElementById('fullPageLoader');
+      if (loader) loader.classList.add('fade-out');
     }
   } catch(e) {
     console.warn('Failed to load initial cached data:', e);
