@@ -1405,22 +1405,22 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    padding: 16px;
+    gap: 16px;
+    padding: 20px;
     text-align: center;
   }
 
   .turbine-loader-wrapper.row-layout {
     flex-direction: row;
-    gap: 8px;
+    gap: 10px;
     padding: 0;
   }
 
   .turbine-loader-svg {
-    width: 48px;
-    height: 48px;
+    width: 80px;
+    height: 80px;
     color: var(--teal, #06b6d4);
-    filter: drop-shadow(0 0 8px rgba(6, 182, 212, 0.4));
+    filter: drop-shadow(0 0 12px rgba(6, 182, 212, 0.45));
     animation: turbine-glow-pulse 2s ease-in-out infinite alternate;
   }
 
@@ -1431,9 +1431,52 @@
   }
 
   .turbine-loader-wrapper.small .turbine-loader-svg {
-    width: 20px;
-    height: 20px;
-    filter: drop-shadow(0 0 4px rgba(6, 182, 212, 0.3));
+    width: 24px;
+    height: 24px;
+    filter: drop-shadow(0 0 5px rgba(6, 182, 212, 0.35));
+  }
+
+  /* Large version for full-screen load overlays */
+  .turbine-loader-wrapper.large {
+    gap: 24px;
+    padding: 32px;
+  }
+
+  .turbine-loader-wrapper.large .turbine-loader-svg {
+    width: 160px;
+    height: 160px;
+    filter: drop-shadow(0 0 25px rgba(6, 182, 212, 0.55));
+  }
+
+  .turbine-loader-wrapper.large .turbine-loader-text {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text, #f8fafc);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* Centered Viewport Overlay Loader */
+  .full-page-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(7, 11, 19, 0.97); /* Solid matching dark background */
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 99999;
+    transition: opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.5s;
+  }
+
+  .full-page-loader.fade-out {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
   }
 
   .turbine-loader-casing {
@@ -1462,8 +1505,8 @@
   }
 
   @keyframes turbine-glow-pulse {
-    from { filter: drop-shadow(0 0 5px rgba(6, 182, 212, 0.3)); }
-    to { filter: drop-shadow(0 0 12px rgba(6, 182, 212, 0.6)); }
+    from { filter: drop-shadow(0 0 6px rgba(6, 182, 212, 0.3)); }
+    to { filter: drop-shadow(0 0 16px rgba(6, 182, 212, 0.6)); }
   }
 
   .turbine-blade {

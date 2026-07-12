@@ -389,6 +389,8 @@ async function refreshData(force = false, triggerScrape = false) {
     }
   } finally {
     if (btn) { btn.disabled = false; btn.innerHTML = '↻ Odśwież dane'; }
+    const loader = document.getElementById('fullPageLoader');
+    if (loader) loader.classList.add('fade-out');
   }
 }
 
@@ -1298,6 +1300,8 @@ async function addAthlete(){
       loadCrew();
       updateHeader();
       renderAll();
+      const loader = document.getElementById('fullPageLoader');
+      if (loader) loader.classList.add('fade-out');
     }
   } catch(e) {
     console.warn('Failed to load initial cached data:', e);
