@@ -173,8 +173,40 @@
     <h2 style="margin-top: 0; margin-bottom: 20px; font-size: 18px; font-weight: 700; color: #fff;">Status i kontrola synchronizacji Stravit</h2>
     <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 20px;">
       <div>
-        <div style="color: var(--muted); font-size: 13px; margin-bottom: 4px;">Aktualny stan procesu synchronizacji:</div>
-        <div class="status-indicator" id="syncStatusText">Ładowanie statusu...</div>
+        <div class="status-indicator" id="syncStatusText">
+          <span class="turbine-loader-wrapper small row-layout">
+            <svg class="turbine-loader-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px;">
+              <defs>
+                <path id="turbine-blade-admin-status" class="turbine-blade" d="M 50 50 C 46 36, 42 22, 50 8 C 53 22, 49 36, 50 50 Z" />
+              </defs>
+              <circle cx="50" cy="50" r="45" class="turbine-casing" />
+              <circle cx="50" cy="50" r="41" class="turbine-inner-casing" />
+              <g class="turbine-rotor">
+                <use href="#turbine-blade-admin-status" transform="rotate(0 50 50)" />
+                <use href="#turbine-blade-admin-status" transform="rotate(20 50 50)" />
+                <use href="#turbine-blade-admin-status" transform="rotate(40 50 50)" />
+                <use href="#turbine-blade-admin-status" transform="rotate(60 50 50)" />
+                <use href="#turbine-blade-admin-status" transform="rotate(80 50 50)" />
+                <use href="#turbine-blade-admin-status" transform="rotate(100 50 50)" />
+                <use href="#turbine-blade-admin-status" transform="rotate(120 50 50)" />
+                <use href="#turbine-blade-admin-status" transform="rotate(140 50 50)" />
+                <use href="#turbine-blade-admin-status" transform="rotate(160 50 50)" />
+                <use href="#turbine-blade-admin-status" transform="rotate(180 50 50)" />
+                <use href="#turbine-blade-admin-status" transform="rotate(200 50 50)" />
+                <use href="#turbine-blade-admin-status" transform="rotate(220 50 50)" />
+                <use href="#turbine-blade-admin-status" transform="rotate(240 50 50)" />
+                <use href="#turbine-blade-admin-status" transform="rotate(260 50 50)" />
+                <use href="#turbine-blade-admin-status" transform="rotate(280 50 50)" />
+                <use href="#turbine-blade-admin-status" transform="rotate(300 50 50)" />
+                <use href="#turbine-blade-admin-status" transform="rotate(320 50 50)" />
+                <use href="#turbine-blade-admin-status" transform="rotate(340 50 50)" />
+                <circle cx="50" cy="50" r="14" class="turbine-spinner" />
+                <path d="M 50 50 Q 48 44 43 45 T 48 54" class="turbine-spiral" />
+              </g>
+            </svg>
+            <span class="turbine-loader-text">Ładowanie statusu...</span>
+          </span>
+        </div>
         <div id="syncErrorMessage" style="color: var(--coral); font-size: 13px; margin-top: 6px; font-weight: 500;"></div>
       </div>
       
@@ -210,7 +242,40 @@
           </thead>
           <tbody id="logsTableBody">
             <tr>
-              <td colspan="6" style="text-align: center; color: var(--muted); padding: 24px;">Ładowanie logów...</td>
+              <td colspan="6" style="text-align: center; color: var(--muted); padding: 24px;">
+                <span class="turbine-loader-wrapper small row-layout" style="justify-content: center;">
+                  <svg class="turbine-loader-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px;">
+                    <defs>
+                      <path id="turbine-blade-admin-logs" class="turbine-blade" d="M 50 50 C 46 36, 42 22, 50 8 C 53 22, 49 36, 50 50 Z" />
+                    </defs>
+                    <circle cx="50" cy="50" r="45" class="turbine-casing" />
+                    <circle cx="50" cy="50" r="41" class="turbine-inner-casing" />
+                    <g class="turbine-rotor">
+                      <use href="#turbine-blade-admin-logs" transform="rotate(0 50 50)" />
+                      <use href="#turbine-blade-admin-logs" transform="rotate(20 50 50)" />
+                      <use href="#turbine-blade-admin-logs" transform="rotate(40 50 50)" />
+                      <use href="#turbine-blade-admin-logs" transform="rotate(60 50 50)" />
+                      <use href="#turbine-blade-admin-logs" transform="rotate(80 50 50)" />
+                      <use href="#turbine-blade-admin-logs" transform="rotate(100 50 50)" />
+                      <use href="#turbine-blade-admin-logs" transform="rotate(120 50 50)" />
+                      <use href="#turbine-blade-admin-logs" transform="rotate(140 50 50)" />
+                      <use href="#turbine-blade-admin-logs" transform="rotate(160 50 50)" />
+                      <use href="#turbine-blade-admin-logs" transform="rotate(180 50 50)" />
+                      <use href="#turbine-blade-admin-logs" transform="rotate(200 50 50)" />
+                      <use href="#turbine-blade-admin-logs" transform="rotate(220 50 50)" />
+                      <use href="#turbine-blade-admin-logs" transform="rotate(240 50 50)" />
+                      <use href="#turbine-blade-admin-logs" transform="rotate(260 50 50)" />
+                      <use href="#turbine-blade-admin-logs" transform="rotate(280 50 50)" />
+                      <use href="#turbine-blade-admin-logs" transform="rotate(300 50 50)" />
+                      <use href="#turbine-blade-admin-logs" transform="rotate(320 50 50)" />
+                      <use href="#turbine-blade-admin-logs" transform="rotate(340 50 50)" />
+                      <circle cx="50" cy="50" r="14" class="turbine-spinner" />
+                      <path d="M 50 50 Q 48 44 43 45 T 48 54" class="turbine-spiral" />
+                    </g>
+                  </svg>
+                  <span class="turbine-loader-text">Ładowanie logów...</span>
+                </span>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -239,7 +304,40 @@
           </thead>
           <tbody id="recentWorkoutsBody">
             <tr>
-              <td colspan="8" style="text-align: center; color: var(--muted); padding: 24px;">Ładowanie ostatnich treningów...</td>
+              <td colspan="8" style="text-align: center; color: var(--muted); padding: 24px;">
+                <span class="turbine-loader-wrapper small row-layout" style="justify-content: center;">
+                  <svg class="turbine-loader-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px;">
+                    <defs>
+                      <path id="turbine-blade-admin-workouts" class="turbine-blade" d="M 50 50 C 46 36, 42 22, 50 8 C 53 22, 49 36, 50 50 Z" />
+                    </defs>
+                    <circle cx="50" cy="50" r="45" class="turbine-casing" />
+                    <circle cx="50" cy="50" r="41" class="turbine-inner-casing" />
+                    <g class="turbine-rotor">
+                      <use href="#turbine-blade-admin-workouts" transform="rotate(0 50 50)" />
+                      <use href="#turbine-blade-admin-workouts" transform="rotate(20 50 50)" />
+                      <use href="#turbine-blade-admin-workouts" transform="rotate(40 50 50)" />
+                      <use href="#turbine-blade-admin-workouts" transform="rotate(60 50 50)" />
+                      <use href="#turbine-blade-admin-workouts" transform="rotate(80 50 50)" />
+                      <use href="#turbine-blade-admin-workouts" transform="rotate(100 50 50)" />
+                      <use href="#turbine-blade-admin-workouts" transform="rotate(120 50 50)" />
+                      <use href="#turbine-blade-admin-workouts" transform="rotate(140 50 50)" />
+                      <use href="#turbine-blade-admin-workouts" transform="rotate(160 50 50)" />
+                      <use href="#turbine-blade-admin-workouts" transform="rotate(180 50 50)" />
+                      <use href="#turbine-blade-admin-workouts" transform="rotate(200 50 50)" />
+                      <use href="#turbine-blade-admin-workouts" transform="rotate(220 50 50)" />
+                      <use href="#turbine-blade-admin-workouts" transform="rotate(240 50 50)" />
+                      <use href="#turbine-blade-admin-workouts" transform="rotate(260 50 50)" />
+                      <use href="#turbine-blade-admin-workouts" transform="rotate(280 50 50)" />
+                      <use href="#turbine-blade-admin-workouts" transform="rotate(300 50 50)" />
+                      <use href="#turbine-blade-admin-workouts" transform="rotate(320 50 50)" />
+                      <use href="#turbine-blade-admin-workouts" transform="rotate(340 50 50)" />
+                      <circle cx="50" cy="50" r="14" class="turbine-spinner" />
+                      <path d="M 50 50 Q 48 44 43 45 T 48 54" class="turbine-spiral" />
+                    </g>
+                  </svg>
+                  <span class="turbine-loader-text">Ładowanie ostatnich treningów...</span>
+                </span>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -252,6 +350,43 @@
 <script>
   const CHALLENGE_SLUG = 'rywalizacja-sportowa';
   let pollInterval = null;
+
+  function getSmallTurbineLoaderHTML(text) {
+    return `
+    <span class="turbine-loader-wrapper small row-layout" style="display: inline-flex; vertical-align: middle;">
+      <svg class="turbine-loader-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width: 18px; height: 18px;">
+        <defs>
+          <path id="turbine-blade-admin-dynamic" class="turbine-blade" d="M 50 50 C 46 36, 42 22, 50 8 C 53 22, 49 36, 50 50 Z" />
+        </defs>
+        <circle cx="50" cy="50" r="45" class="turbine-casing" />
+        <circle cx="50" cy="50" r="41" class="turbine-inner-casing" />
+        <g class="turbine-rotor">
+          <use href="#turbine-blade-admin-dynamic" transform="rotate(0 50 50)" />
+          <use href="#turbine-blade-admin-dynamic" transform="rotate(20 50 50)" />
+          <use href="#turbine-blade-admin-dynamic" transform="rotate(40 50 50)" />
+          <use href="#turbine-blade-admin-dynamic" transform="rotate(60 50 50)" />
+          <use href="#turbine-blade-admin-dynamic" transform="rotate(80 50 50)" />
+          <use href="#turbine-blade-admin-dynamic" transform="rotate(100 50 50)" />
+          <use href="#turbine-blade-admin-dynamic" transform="rotate(120 50 50)" />
+          <use href="#turbine-blade-admin-dynamic" transform="rotate(140 50 50)" />
+          <use href="#turbine-blade-admin-dynamic" transform="rotate(160 50 50)" />
+          <use href="#turbine-blade-admin-dynamic" transform="rotate(180 50 50)" />
+          <use href="#turbine-blade-admin-dynamic" transform="rotate(200 50 50)" />
+          <use href="#turbine-blade-admin-dynamic" transform="rotate(220 50 50)" />
+          <use href="#turbine-blade-admin-dynamic" transform="rotate(240 50 50)" />
+          <use href="#turbine-blade-admin-dynamic" transform="rotate(260 50 50)" />
+          <use href="#turbine-blade-admin-dynamic" transform="rotate(280 50 50)" />
+          <use href="#turbine-blade-admin-dynamic" transform="rotate(300 50 50)" />
+          <use href="#turbine-blade-admin-dynamic" transform="rotate(320 50 50)" />
+          <use href="#turbine-blade-admin-dynamic" transform="rotate(340 50 50)" />
+          <circle cx="50" cy="50" r="14" class="turbine-spinner" />
+          <path d="M 50 50 Q 48 44 43 45 T 48 54" class="turbine-spiral" />
+        </g>
+      </svg>
+      ${text ? `<span class="turbine-loader-text" style="font-size: 11px; margin-left: 4px;">${text}</span>` : ''}
+    </span>
+    `;
+  }
 
   function formatTime(isoStr) {
     if (!isoStr) return '-';
@@ -303,13 +438,13 @@
       const btnFull = document.getElementById('btnSyncFull');
 
       if (job.status === 'requested') {
-        statusText.innerHTML = `<span class="badge-warning">Oczekuje w kolejce...</span>`;
+        statusText.innerHTML = `<span class="badge-warning" style="display: inline-flex; align-items: center; gap: 6px;">${getSmallTurbineLoaderHTML('')} Oczekuje w kolejce...</span>`;
         errorText.textContent = '';
         btnQuick.disabled = true;
         btnFull.disabled = true;
         startPolling();
       } else if (job.status === 'running') {
-        statusText.innerHTML = `<span class="badge-warning">Synchronizacja w toku...</span>`;
+        statusText.innerHTML = `<span class="badge-warning" style="display: inline-flex; align-items: center; gap: 6px;">${getSmallTurbineLoaderHTML('')} Synchronizacja w toku...</span>`;
         errorText.textContent = '';
         btnQuick.disabled = true;
         btnFull.disabled = true;
