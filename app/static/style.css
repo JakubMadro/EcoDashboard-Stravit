@@ -14,6 +14,11 @@
     --muted: #94a3b8;
     --muted2: #475569;
     --glow: rgba(6, 182, 212, 0.1);
+    
+    /* MTU Polska Brand Colors (confined only to turbine loaders) */
+    --mtu-red: #CC1D56;
+    --mtu-blue: #003963;
+    --mtu-white: #ffffff;
   }
 
   * { box-sizing: border-box; }
@@ -1419,8 +1424,8 @@
   .turbine-loader-svg {
     width: 80px;
     height: 80px;
-    color: var(--teal, #06b6d4);
-    filter: drop-shadow(0 0 12px rgba(6, 182, 212, 0.45));
+    color: var(--mtu-red, #CC1D56);
+    filter: drop-shadow(0 0 12px rgba(204, 29, 86, 0.45));
     animation: turbine-glow-pulse 2s ease-in-out infinite alternate;
   }
 
@@ -1433,7 +1438,7 @@
   .turbine-loader-wrapper.small .turbine-loader-svg {
     width: 24px;
     height: 24px;
-    filter: drop-shadow(0 0 5px rgba(6, 182, 212, 0.35));
+    filter: drop-shadow(0 0 5px rgba(204, 29, 86, 0.35));
   }
 
   /* Large version for full-screen load overlays */
@@ -1445,7 +1450,7 @@
   .turbine-loader-wrapper.large .turbine-loader-svg {
     width: 160px;
     height: 160px;
-    filter: drop-shadow(0 0 25px rgba(6, 182, 212, 0.55));
+    filter: drop-shadow(0 0 25px rgba(204, 29, 86, 0.55));
   }
 
   .turbine-loader-wrapper.large .turbine-loader-text {
@@ -1479,11 +1484,39 @@
     pointer-events: none;
   }
 
+  /* Center loader overlay for dashboard-main container */
+  .dashboard-main {
+    position: relative;
+  }
+
+  .main-content-loader {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(7, 11, 19, 0.75); /* matches --bg-dark with transparency */
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    border-radius: 16px;
+  }
+
+  .main-content-loader.fade-out {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
   .turbine-loader-casing {
-    stroke: var(--text, #f8fafc);
+    stroke: var(--mtu-white, #ffffff);
     stroke-width: 3.5;
     fill: none;
-    opacity: 0.85;
+    opacity: 0.9;
   }
 
   .turbine-inner-casing {
@@ -1505,21 +1538,21 @@
   }
 
   @keyframes turbine-glow-pulse {
-    from { filter: drop-shadow(0 0 6px rgba(6, 182, 212, 0.3)); }
-    to { filter: drop-shadow(0 0 16px rgba(6, 182, 212, 0.6)); }
+    from { filter: drop-shadow(0 0 6px rgba(204, 29, 86, 0.3)); }
+    to { filter: drop-shadow(0 0 16px rgba(204, 29, 86, 0.6)); }
   }
 
   .turbine-blade {
-    fill: var(--text, #f8fafc);
-    opacity: 0.75;
+    fill: var(--mtu-white, #ffffff);
+    opacity: 0.85;
   }
 
   .turbine-spinner {
-    fill: var(--teal, #06b6d4);
+    fill: var(--mtu-red, #CC1D56);
   }
 
   .turbine-spiral {
-    stroke: var(--bg-dark, #070b13);
+    stroke: var(--mtu-blue, #003963);
     stroke-width: 1.8;
     fill: none;
     stroke-linecap: round;

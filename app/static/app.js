@@ -312,6 +312,8 @@ async function refreshData(force = false, triggerScrape = false) {
   const status = document.getElementById('refreshStatus');
   if (btn) { btn.disabled = true; btn.innerHTML = getSmallTurbineLoaderHTML('Pobieranie…'); }
   if (status) { status.innerHTML = ''; status.style.color = 'var(--muted)'; }
+  const mainLoader = document.getElementById('mainLoader');
+  if (mainLoader) mainLoader.classList.remove('fade-out');
   try {
     if (triggerScrape) {
       await triggerSyncAndPoll(false);
@@ -391,6 +393,8 @@ async function refreshData(force = false, triggerScrape = false) {
     if (btn) { btn.disabled = false; btn.innerHTML = '↻ Odśwież dane'; }
     const loader = document.getElementById('fullPageLoader');
     if (loader) loader.classList.add('fade-out');
+    const mainLoader = document.getElementById('mainLoader');
+    if (mainLoader) mainLoader.classList.add('fade-out');
   }
 }
 
