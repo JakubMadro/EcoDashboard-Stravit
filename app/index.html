@@ -232,6 +232,7 @@
           <button class="chart-tab" data-chart="bar">📊 Porównanie</button>
           <button class="chart-tab" data-chart="line">Forma</button>
           <button class="chart-tab" data-chart="stack">Kategorie</button>
+          <button class="chart-tab" data-chart="rank">🏆 Ranking</button>
         </div>
 
         <div class="charts-grid">
@@ -279,6 +280,20 @@
               <button class="expand-chart-btn" title="Pokaż na pełnym ekranie" onclick="openChartModal('stack')">⛶</button>
             </div>
             <div class="chart-box tall"><canvas id="stackChart"></canvas></div>
+          </div>
+
+          <div class="chart-container chart-card-wrapper" data-chart="rank">
+            <div class="chart-header">
+              <h3>Historia rankingu</h3>
+              <span class="chart-subtitle">Miejsce w klasyfikacji generalnej (niżej = lepiej)</span>
+              <button class="expand-chart-btn" title="Pokaż na pełnym ekranie" onclick="openChartModal('rank')">⛶</button>
+            </div>
+            <div class="chart-actions-toolbar">
+              <button onclick="toggleChartLegend('rank', true)" class="chart-action-btn">👁️ Pokaż wszystkich</button>
+              <button onclick="toggleChartLegend('rank', false)" class="chart-action-btn">🚫 Ukryj wszystkich</button>
+              <button onclick="toggleChartLegendSolo('rank')" class="chart-action-btn">👤 Tylko ja</button>
+            </div>
+            <div class="chart-box tall"><canvas id="rankChart"></canvas></div>
           </div>
         </div>
       </section>

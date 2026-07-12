@@ -74,6 +74,38 @@ def build_data_from_activities(activities, crew_filter=None):
     for idx, (_, user) in enumerate(sorted_users, 1):
         user["rank"] = idx
 
+    # 2.1 Calculate daily ranks and changes retroactively for all users
+    daily_points_all = {}
+    for activity in activities:
+        name = activity["name"]
+        d = activity["dateStr"]
+        pts = activity["pts"]
+        if name not in daily_points_all:
+            daily_points_all[name] = {}
+        daily_points_all[name][d] = daily_points_all[name].get(d, 0.0) + pts
+
+    ranks_by_date = {}
+    cumulative_points = {name: 0.0 for name in daily_points_all}
+    for date in all_dates:
+        for name in daily_points_all:
+            cumulative_points[name] += daily_points_all[name].get(date, 0.0)
+        sorted_users_date = sorted(cumulative_points.items(), key=lambda item: item[1], reverse=True)
+        ranks_by_date[date] = {}
+        for idx, (name, pts) in enumerate(sorted_users_date, 1):
+            ranks_by_date[date][name] = idx
+
+    # Calculate latest day rank changes
+    latest_date = all_dates[-1] if all_dates else None
+    prev_date = all_dates[-2] if len(all_dates) >= 2 else None
+    
+    for name, user in all_users.items():
+        if latest_date and prev_date:
+            curr_r = ranks_by_date[latest_date].get(name, len(all_users))
+            prev_r = ranks_by_date[prev_date].get(name, len(all_users))
+            user["rankChange"] = prev_r - curr_r
+        else:
+            user["rankChange"] = 0
+
     # 3. Build detailed data only for the filtered crew (or all if crew_set is None)
     users = {}
     for activity in activities:
@@ -93,6 +125,7 @@ def build_data_from_activities(activities, crew_filter=None):
                 "time": meta["time"],
                 "count": meta["count"],
                 "rank": meta["rank"],
+                "rankChange": meta["rankChange"],
                 "daily": {date: {"points": 0.0, "distance": 0.0} for date in all_dates},
                 "byType": {},
             }
@@ -112,11 +145,23 @@ def build_data_from_activities(activities, crew_filter=None):
         by_type["points"] += activity["pts"]
         by_type["time"] += activity["timeSec"]
 
-    # Round daily and sport details
-    for user in users.values():
-        for day in user["daily"].values():
-            day["points"] = round(day["points"], 3)
-            day["distance"] = round(day["distance"], 2)
+    # Round daily and sport details, and inject daily ranks & changes
+    for name, user in users.items():
+        for r_idx, date in enumerate(all_dates):
+            day_data = user["daily"][date]
+            day_data["points"] = round(day_data["points"], 3)
+            day_data["distance"] = round(day_data["distance"], 2)
+            
+            # Inject rank and rankChange for this date
+            curr_r = ranks_by_date[date].get(name, len(all_users))
+            day_data["rank"] = curr_r
+            if r_idx > 0:
+                prev_date_str = all_dates[r_idx - 1]
+                prev_r = ranks_by_date[prev_date_str].get(name, len(all_users))
+                day_data["rankChange"] = prev_r - curr_r
+            else:
+                day_data["rankChange"] = 0
+
         for by_type in user["byType"].values():
             by_type["distance"] = round(by_type["distance"], 2)
             by_type["points"] = round(by_type["points"], 3)
@@ -130,7 +175,7 @@ def build_data_from_activities(activities, crew_filter=None):
 
     names = sorted(all_users.keys(), key=lambda name: name.casefold())
     top = sorted(
-        [{"name": name, "points": user["points"], "rank": user["rank"]} for name, user in all_users.items()],
+        [{"name": name, "points": user["points"], "rank": user["rank"], "rankChange": user.get("rankChange", 0)} for name, user in all_users.items()],
         key=lambda item: item["rank"],
     )[:10]
 

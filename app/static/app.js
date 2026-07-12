@@ -70,135 +70,7 @@ function getSmallTurbineLoaderHTML(text) {
   `;
 }
 
-async function loadCSV(url) {
-  const resp = await fetch(url);
-  if (!resp.ok) throw new Error(`Nie można załadować CSV: ${resp.status}`);
-  return await resp.text();
-}
-
-function parseTimeToSeconds(timeStr) {
-  // format: HH:MM:SS
-  const parts = timeStr.trim().split(':');
-  if (parts.length !== 3) return 0;
-  return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
-}
-
-function buildDATA(csvText) {
-  const lines = csvText.split('\n');
-
-  // Znajdź linię nagłówkową (zawiera "nazwa uzytkownika" lub "lp")
-  let headerIdx = -1;
-  for (let i = 0; i < lines.length; i++) {
-    const low = lines[i].toLowerCase();
-    if (low.includes('nazwa uzytkownika') || low.includes('przyznane_punkty')) {
-      headerIdx = i;
-      break;
-    }
-  }
-  if (headerIdx === -1) throw new Error('Nie znaleziono nagłówka CSV');
-
-  // Wiersze danych
-  const dataLines = lines.slice(headerIdx + 1).filter(l => l.trim() && l.trim() !== 'aaa');
-
-  // Kolekcja aktywności
-  const activities = [];
-  for (const line of dataLines) {
-    const cols = line.split(';').map(c => c.trim());
-    if (cols.length < 9) continue;
-    const name   = cols[1];
-    const dist   = parseFloat(cols[2].replace(',', '.')) || 0;
-    const pts    = parseFloat(cols[3].replace(',', '.')) || 0;
-    const elev   = parseFloat(cols[4].replace(',', '.')) || 0;
-    const timeSec = parseTimeToSeconds(cols[5]);
-    const type   = cols[6];
-    const dateStr = cols[8].substring(0, 10); // YYYY-MM-DD
-    if (!name || !dateStr) continue;
-    activities.push({ name, dist, pts, elev, timeSec, type, dateStr });
-  }
-
-  if (activities.length === 0) throw new Error('Brak wierszy w CSV');
-
-  // Wykryj zakres dat
-  const allDatesSet = new Set(activities.map(a => a.dateStr));
-  const allDates = Array.from(allDatesSet).sort();
-  const dateRange = [allDates[0], allDates[allDates.length - 1]];
-
-  // Buduj per-user stats
-  const usersMap = {};
-  for (const act of activities) {
-    if (!usersMap[act.name]) {
-      usersMap[act.name] = {
-        distance: 0, points: 0, elevation: 0, time: 0, count: 0,
-        daily: {}, byType: {}
-      };
-      // Inicjalizuj zerami dla wszystkich dat zakresu
-      for (const d of allDates) {
-        usersMap[act.name].daily[d] = { points: 0, distance: 0 };
-      }
-    }
-    const u = usersMap[act.name];
-    u.distance += act.dist;
-    u.points   += act.pts;
-    u.elevation += act.elev;
-    u.time     += act.timeSec;
-    u.count    += 1;
-
-    if (u.daily[act.dateStr]) {
-      u.daily[act.dateStr].points   += act.pts;
-      u.daily[act.dateStr].distance += act.dist;
-    }
-    // Jeśli data aktywności nie jest w głównym zakresie — ignoruj (nie crashuj)
-
-    if (!u.byType[act.type]) {
-      u.byType[act.type] = { count: 0, distance: 0, points: 0, time: 0 };
-    }
-    u.byType[act.type].count    += 1;
-    u.byType[act.type].distance += act.dist;
-    u.byType[act.type].points   += act.pts;
-    u.byType[act.type].time     += act.timeSec;
-  }
-
-  // Zaokrągl wartości
-  for (const u of Object.values(usersMap)) {
-    u.distance = Math.round(u.distance * 100) / 100;
-    u.points   = Math.round(u.points   * 100) / 100;
-    u.elevation = Math.round(u.elevation * 10) / 10;
-    for (const d of Object.values(u.daily)) {
-      d.points   = Math.round(d.points   * 100) / 100;
-      d.distance = Math.round(d.distance * 100) / 100;
-    }
-    for (const t of Object.values(u.byType)) {
-      t.distance = Math.round(t.distance * 100) / 100;
-      t.points   = Math.round(t.points   * 100) / 100;
-    }
-  }
-
-  // Ranking po punktach
-  const sorted = Object.entries(usersMap)
-    .sort(([,a],[,b]) => b.points - a.points);
-  sorted.forEach(([name, u], idx) => { u.rank = idx + 1; });
-
-  // Top 10 liderów
-  const topLeaders = sorted.slice(0, 10).map(([name, u]) => ({
-    name, points: u.points, rank: u.rank
-  }));
-
-  // Totals
-  const totals = {
-    distance: Math.round(Object.values(usersMap).reduce((s, u) => s + u.distance, 0) * 10) / 10,
-    points:   Math.round(Object.values(usersMap).reduce((s, u) => s + u.points,   0) * 10) / 10,
-    count:    activities.length,
-    time:     Object.values(usersMap).reduce((s, u) => s + u.time, 0),
-  };
-
-  const allNames = Object.keys(usersMap).sort((a, b) => a.localeCompare(b, 'pl'));
-  const totalUsers = allNames.length;
-
-  return { dateRange, allDates, totalUsers, totals, allNames, topLeaders, users: usersMap };
-}
-
-// Nazwa pliku CSV — ostatnia awaryjna kopia, gdy API/proxy nie działa
-const CSV_FILENAME = 'rywalizacja-sportowa-activities-2026-07-06_14_05_56.csv';
+// CSV parser removed - API/Storage Account is the single source of truth
 
 const CHALLENGE_SLUG = 'rywalizacja-sportowa';
 
@@ -356,7 +228,7 @@ async function refreshData(force = false, triggerScrape = false) {
         }
       }
     } catch(apiErr) {
-      console.warn('API fetch failed, falling back:', apiErr.message);
+      console.warn('API fetch failed:', apiErr.message);
       if (apiErr.authRequired) setAuthPanelVisible(true);
       
       try {
@@ -367,11 +239,7 @@ async function refreshData(force = false, triggerScrape = false) {
         if (resolvedProfiles) savedProfiles = resolvedProfiles;
       } catch(e) {}
 
-      if (!DATA) {
-        let csvText = await loadCSV(CSV_FILENAME);
-        DATA = buildDATA(csvText);
-      }
-      if (status) { status.textContent = '⚠ zaloguj Stravit · ostatnie dane'; status.style.color = 'var(--amber)'; }
+      if (status) { status.textContent = '⚠ Błąd połączenia z API'; status.style.color = 'var(--coral)'; }
     }
     
     updateHeader();
@@ -843,11 +711,15 @@ function renderBibs(){
   sortedCrew.forEach(name=>{
     const u = DATA.users[name];
     const c = colorFor(name);
+    const bestRank = Math.min(...DATA.allDates.map(d => u.daily[d]?.rank || DATA.totalUsers));
     const card = document.createElement('div');
     card.className = `bib${name===ME_NAME ? ' bib-me' : ''}`;
     card.innerHTML = `
       <div class="accentbar" style="background:${c}"></div>
-      <div class="bib-rank">MIEJSCE #${u.rank} / ${DATA.totalUsers}</div>
+      <div class="bib-rank">
+        MIEJSCE #${u.rank} / ${DATA.totalUsers}
+        <span class="bib-best-rank" title="Najwyższe miejsce w rankingu generalnym w historii wyzwania">(Najwyższe: #${bestRank})</span>
+      </div>
       <div class="bib-name">${name}${name===ME_NAME?'<span class="tag-me">JA</span>':''}</div>
       <div class="bib-points" style="color:${c}">${u.points.toFixed(0)}</div>
       <div class="bib-points-label">punktów w wyzwaniu</div>
@@ -1024,6 +896,64 @@ function renderStackChart(){
   });
 }
 
+function renderRankChart(){
+  destroyChart('rank');
+  const ctx = document.getElementById('rankChart');
+  if (!ctx) return;
+  const present = crew.filter(n=>DATA.users[n]);
+  charts.rank = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels: DATA.allDates.map(fmtDateShort),
+      datasets: present.map(name=>({
+        label:name,
+        data: DATA.allDates.map(d=>DATA.users[name].daily[d].rank),
+        borderColor: colorFor(name),
+        backgroundColor: colorFor(name)+'22',
+        borderWidth: name===ME_NAME?3:2,
+        tension:0.2,
+        pointRadius:3,
+        pointBackgroundColor: colorFor(name),
+      }))
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{
+          position:'bottom',
+          labels:{color:'#eef4f8', font:{family:'Inter', size:12}, boxWidth:10, boxHeight:10}
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const val = context.raw;
+              const name = context.dataset.label;
+              const date = DATA.allDates[context.dataIndex];
+              const change = DATA.users[name].daily[date].rankChange;
+              const changeText = change === 0 ? 'bez zmian' : (change > 0 ? `▲${change}` : `▼${Math.abs(change)}`);
+              return ` Msc. #${val} (${changeText})`;
+            }
+          }
+        }
+      },
+      scales:{
+        x:{grid:{color:'#1c3a54'}, ticks:{color:'#7f9bb4'}},
+        y:{
+          reverse:true,
+          grid:{color:'#1c3a54'},
+          ticks:{
+            color:'#7f9bb4',
+            stepSize: 1,
+            precision: 0
+          },
+          title:{display:true, text:'miejsce w rankingu', color:'#7f9bb4'}
+        }
+      }
+    }
+  });
+}
+
 function renderRecentActivities() {
   const tbody = document.getElementById('recentActivitiesBody');
   if (!DATA.recentActivities || DATA.recentActivities.length === 0) {
@@ -1093,6 +1023,12 @@ function renderRecentActivities() {
   }).join('');
 }
 
+function getRankChangeBadgeHTML(change) {
+  if (!change) return `<span class="rank-change-badge stable">-</span>`;
+  if (change > 0) return `<span class="rank-change-badge up">▲${change}</span>`;
+  return `<span class="rank-change-badge down">▼${Math.abs(change)}</span>`;
+}
+
 function renderCrewLeaderboard() {
   const tbody = document.getElementById('crewLeaderboardBody');
   if (!DATA.users || Object.keys(DATA.users).length === 0) {
@@ -1106,7 +1042,8 @@ function renderCrewLeaderboard() {
     .map(name => ({
       name: name,
       points: DATA.users[name].points,
-      generalRank: DATA.users[name].rank
+      generalRank: DATA.users[name].rank,
+      rankChange: DATA.users[name].rankChange || 0
     }));
 
   if (crewList.length === 0) {
@@ -1121,7 +1058,7 @@ function renderCrewLeaderboard() {
       <td class="rankcol">${index + 1}</td>
       <td>
         <span style="font-weight:600;">${l.name}</span>
-        <span style="font-size:10px; color:var(--text-muted); margin-left:6px;" title="Miejsce w klasyfikacji generalnej">(Gen #${l.generalRank})</span>
+        <span style="font-size:10px; color:var(--text-muted); margin-left:6px;" title="Miejsce w klasyfikacji generalnej i dzisiejsza zmiana">(Gen #${l.generalRank} ${getRankChangeBadgeHTML(l.rankChange)})</span>
         ${l.name === ME_NAME ? ' <span class="tag-me">JA</span>' : ''}
       </td>
       <td class="ptscol">${l.points.toFixed(1)}</td>
@@ -1132,7 +1069,10 @@ function renderTop10(){
   const tbody = document.getElementById('top10Body');
   tbody.innerHTML = DATA.topLeaders.map(l=>`
     <tr class="${crew.includes(l.name)?'tracked':''}">
-      <td class="rankcol">${l.rank}</td>
+      <td class="rankcol">
+        ${l.rank}
+        ${getRankChangeBadgeHTML(l.rankChange || 0)}
+      </td>
       <td>${l.name}${l.name===ME_NAME?' <span class="tag-me">JA</span>':''}</td>
       <td class="ptscol">${l.points.toFixed(1)}</td>
     </tr>`).join('');
@@ -1146,6 +1086,7 @@ function renderAll(){
   renderCumulativeChart();
   renderLineChart();
   renderStackChart();
+  renderRankChart();
   renderRecentActivities();
   renderCrewLeaderboard();
   renderTop10();
@@ -1372,6 +1313,9 @@ function openChartModal(chartKey) {
   } else if (chartKey === 'stack') {
     title = "Z czego te punkty";
     subtitle = "Rozkład punktów według typu treningu";
+  } else if (chartKey === 'rank') {
+    title = "Historia rankingu";
+    subtitle = "Miejsce w klasyfikacji generalnej w kolejnych dniach (niżej = lepiej)";
   }
   
   document.getElementById('modalChartTitle').textContent = title;
@@ -1382,6 +1326,13 @@ function openChartModal(chartKey) {
     data: JSON.parse(JSON.stringify(originalChart.config.data)),
     options: JSON.parse(JSON.stringify(originalChart.config.options))
   };
+
+  // Copy over callbacks if they exist to prevent them from being lost during JSON cloning
+  if (originalChart.config.options.plugins && originalChart.config.options.plugins.tooltip && originalChart.config.options.plugins.tooltip.callbacks) {
+    config.options.plugins = config.options.plugins || {};
+    config.options.plugins.tooltip = config.options.plugins.tooltip || {};
+    config.options.plugins.tooltip.callbacks = originalChart.config.options.plugins.tooltip.callbacks;
+  }
   
   config.options.maintainAspectRatio = false;
   config.options.responsive = true;
